@@ -12,6 +12,7 @@ pub fn main() !void {
     try stdout.print("P3\n{} {}\n255\n", .{ image_width, image_height });
 
     for (0..image_height) |j| {
+        std.log.info("Scanline {} of {}.", .{ j, image_height });
         for (0..image_width) |i| {
             const r: f64 = @as(f64, @floatFromInt(i)) / (image_width - 1);
             const g: f64 = @as(f64, @floatFromInt(j)) / (image_height - 1);
@@ -24,6 +25,8 @@ pub fn main() !void {
             try stdout.print("{} {} {}\n", .{ ir, ig, ib });
         }
     }
+
+    std.log.info("Complete!", .{});
 
     // write to stdout, pipe into file
 
