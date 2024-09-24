@@ -5,16 +5,16 @@ const r = @import("ray.zig");
 
 fn hitSphere(center: *const v.point3, radius: f64, ray: *const r.ray) f64 {
     const oc = v.subtract(center, &ray.origin);
-    const a = v.dotProduct(&ray.direction, &ray.direction);
-    const b = -2.0 * v.dotProduct(&ray.direction, &oc);
-    const c_var = v.dotProduct(&oc, &oc) - (radius * radius);
-    const discriminant = (b * b) - (4 * a * c_var);
+    const a = v.lengthSquared(&ray.direction);
+    const h = v.dotProduct(&ray.direction, &oc);
+    const c_var = v.lengthSquared(&oc) - (radius * radius);
+    const discriminant = (h * h) - (a * c_var);
 
     if (discriminant < 0) {
         return -1.0;
     }
 
-    return (-b - std.math.sqrt(discriminant)) / (2.0 * a);
+    return (h - std.math.sqrt(discriminant)) / a;
 }
 
 fn rayColor(ray: *const r.ray) c.color {
@@ -85,26 +85,3 @@ pub fn main() !void {
 
     try bw.flush();
 }
-
-// pub fn main() !void {
-//     // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-//     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-//     // stdout is for the actual output of your application, for example if you
-//     // are implementing gzip, then only the compressed bytes should be sent to
-//     // stdout, not any debugging messages.
-//     const stdout_file = std.io.getStdOut().writer();
-//     var bw = std.io.bufferedWriter(stdout_file);
-//     const stdout = bw.writer();
-
-//     try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-//     try bw.flush(); // don't forget to flush!
-// }
-
-// test "simple test" {
-//     var list = std.ArrayList(i32).init(std.testing.allocator);
-//     defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-//     try list.append(42);
-//     try std.testing.expectEqual(@as(i32, 42), list.pop());
-// }
