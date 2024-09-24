@@ -7,9 +7,9 @@ pub fn writeColor(w: anytype, pixel_color: *const color) !void {
     const g = pixel_color.y;
     const b = pixel_color.z;
 
-    const ir: u8 = @as(u8, @intFromFloat(255.999 * r));
-    const ig: u8 = @as(u8, @intFromFloat(255.999 * g));
-    const ib: u8 = @as(u8, @intFromFloat(255.999 * b));
+    const ir: u16 = @as(u16, @intFromFloat(255.999 * r));
+    const ig: u16 = @as(u16, @intFromFloat(255.999 * g));
+    const ib: u16 = @as(u16, @intFromFloat(255.999 * b));
 
     try w.print("{} {} {}\n", .{ ir, ig, ib });
 }
