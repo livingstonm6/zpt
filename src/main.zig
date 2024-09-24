@@ -1,9 +1,42 @@
 const std = @import("std");
 const c = @import("color.zig");
+const v = @import("vec3.zig");
+const r = @import("ray.zig");
+
+fn rayColor(ray: *const r.ray) c.color {
+    // lerp
+    const unit_direction = v.unit(&ray.direction);
+    const a = 0.5 * (unit_direction.y + 1.0);
+
+    const term1 = v.multiply(&v.vec3{ .x = 1.0, .y = 1.0, .z = 1.0 }, (1.0 - a));
+    const term2 = v.multiply(&v.vec3{ .x = 0.5, .y = 0.7, .z = 1.0 }, a);
+    return v.add(&term1, &term2);
+}
 
 pub fn main() !void {
-    const image_width: u16 = 256;
-    const image_height: u16 = 256;
+    const aspect_ratio: f64 = 16.0 / 9.0;
+    const image_width: u16 = 400;
+
+    var image_height: u16 = image_width / aspect_ratio;
+    if (image_height < 0) image_height = 0;
+
+    const focal_length: f64 = 1.0;
+    const viewport_height: f64 = 2.0;
+    const width_over_height: f64 = @as(f64, @floatFromInt(image_width)) / @as(f64, @floatFromInt(image_height));
+    const viewport_width: f64 = viewport_height * width_over_height;
+    const camera_center = v.point3{ .x = 0, .y = 0, .z = 0 };
+
+    const viewport_u = v.vec3{ .x = viewport_width, .y = 0, .z = 0 };
+    const viewport_v = v.vec3{ .x = 0, .y = -viewport_height, .z = 0 };
+
+    const pixel_delta_u = v.divide(&viewport_u, image_width);
+    const pixel_delta_v = v.divide(&viewport_v, @as(f64, @floatFromInt(image_height)));
+
+    var viewport_upper_left = v.add(&camera_center, &v.vec3{ .x = 0, .y = 0, .z = focal_length });
+    viewport_upper_left = v.subtract(&viewport_upper_left, &v.divide(&viewport_u, 2));
+    viewport_upper_left = v.subtract(&viewport_upper_left, &v.divide(&viewport_v, 2));
+
+    const first_pixel_location = v.add(&viewport_upper_left, &v.multiply(&v.add(&pixel_delta_u, &pixel_delta_v), 0.5));
 
     // render
     const stdout_file = std.io.getStdOut().writer();
@@ -15,19 +48,20 @@ pub fn main() !void {
     for (0..image_height) |j| {
         std.log.info("Scanline {} of {}.", .{ j, image_height });
         for (0..image_width) |i| {
-            const pixel_color = c.color{
-                .x = @as(f64, @floatFromInt(i)) / (image_width - 1),
-                .y = @as(f64, @floatFromInt(j)) / (image_height - 1),
-                .z = 0.0,
-            };
+            const delta_u = v.multiply(&pixel_delta_u, @as(f64, @floatFromInt(i)));
+            const delta_v = v.multiply(&pixel_delta_v, @as(f64, @floatFromInt(j)));
+            const pixel_center = v.add(&v.add(&delta_u, &delta_v), &first_pixel_location);
+
+            const ray_direction = v.subtract(&pixel_center, &camera_center);
+
+            const ray = r.ray{ .origin = camera_center, .direction = ray_direction };
+            const pixel_color: c.color = rayColor(&ray);
 
             try c.writeColor(stdout, &pixel_color);
         }
     }
 
     std.log.info("Complete!", .{});
-
-    // write to stdout, pipe into file
 
     try bw.flush();
 }
