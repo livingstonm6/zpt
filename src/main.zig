@@ -1,4 +1,5 @@
 const std = @import("std");
+const c = @import("color.zig");
 
 pub fn main() !void {
     const image_width: u16 = 256;
@@ -14,15 +15,13 @@ pub fn main() !void {
     for (0..image_height) |j| {
         std.log.info("Scanline {} of {}.", .{ j, image_height });
         for (0..image_width) |i| {
-            const r: f64 = @as(f64, @floatFromInt(i)) / (image_width - 1);
-            const g: f64 = @as(f64, @floatFromInt(j)) / (image_height - 1);
-            const b: f64 = 0.0;
+            const pixel_color = c.color{
+                .x = @as(f64, @floatFromInt(i)) / (image_width - 1),
+                .y = @as(f64, @floatFromInt(j)) / (image_height - 1),
+                .z = 0.0,
+            };
 
-            const ir: u32 = @as(u32, @intFromFloat(255.999 * r));
-            const ig: u32 = @as(u32, @intFromFloat(255.999 * g));
-            const ib: u32 = @as(u32, @intFromFloat(255.999 * b));
-
-            try stdout.print("{} {} {}\n", .{ ir, ig, ib });
+            try c.writeColor(stdout, &pixel_color);
         }
     }
 
