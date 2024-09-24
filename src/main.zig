@@ -3,19 +3,25 @@ const c = @import("color.zig");
 const v = @import("vec3.zig");
 const r = @import("ray.zig");
 
-fn hitSphere(center: *const v.point3, radius: f64, ray: *const r.ray) bool {
+fn hitSphere(center: *const v.point3, radius: f64, ray: *const r.ray) f64 {
     const oc = v.subtract(center, &ray.origin);
     const a = v.dotProduct(&ray.direction, &ray.direction);
     const b = -2.0 * v.dotProduct(&ray.direction, &oc);
     const c_var = v.dotProduct(&oc, &oc) - (radius * radius);
     const discriminant = (b * b) - (4 * a * c_var);
 
-    return discriminant >= 0;
+    if (discriminant < 0) {
+        return -1.0;
+    }
+
+    return (-b - std.math.sqrt(discriminant)) / (2.0 * a);
 }
 
 fn rayColor(ray: *const r.ray) c.color {
-    if (hitSphere(&v.point3{ .x = 0, .y = 0, .z = -1 }, 0.5, ray)) {
-        return c.color{ .x = 1, .y = 0, .z = 0 };
+    const t = hitSphere(&v.point3{ .x = 0, .y = 0, .z = -1 }, 0.5, ray);
+    if (t > 0.0) {
+        const n = v.unit(&v.subtract(&r.at(ray, t), &v.vec3{ .x = 0, .y = 0, .z = -1 }));
+        return v.multiply(&c.color{ .x = n.x + 1, .y = n.y + 1, .z = n.z + 1 }, 0.5);
     }
 
     // lerp
