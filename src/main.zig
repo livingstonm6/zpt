@@ -3,7 +3,21 @@ const c = @import("color.zig");
 const v = @import("vec3.zig");
 const r = @import("ray.zig");
 
+fn hitSphere(center: *const v.point3, radius: f64, ray: *const r.ray) bool {
+    const oc = v.subtract(center, &ray.origin);
+    const a = v.dotProduct(&ray.direction, &ray.direction);
+    const b = -2.0 * v.dotProduct(&ray.direction, &oc);
+    const c_var = v.dotProduct(&oc, &oc) - (radius * radius);
+    const discriminant = (b * b) - (4 * a * c_var);
+
+    return discriminant >= 0;
+}
+
 fn rayColor(ray: *const r.ray) c.color {
+    if (hitSphere(&v.point3{ .x = 0, .y = 0, .z = -1 }, 0.5, ray)) {
+        return c.color{ .x = 1, .y = 0, .z = 0 };
+    }
+
     // lerp
     const unit_direction = v.unit(&ray.direction);
     const a = 0.5 * (unit_direction.y + 1.0);
@@ -32,7 +46,7 @@ pub fn main() !void {
     const pixel_delta_u = v.divide(&viewport_u, image_width);
     const pixel_delta_v = v.divide(&viewport_v, @as(f64, @floatFromInt(image_height)));
 
-    var viewport_upper_left = v.add(&camera_center, &v.vec3{ .x = 0, .y = 0, .z = focal_length });
+    var viewport_upper_left = v.subtract(&camera_center, &v.vec3{ .x = 0, .y = 0, .z = focal_length });
     viewport_upper_left = v.subtract(&viewport_upper_left, &v.divide(&viewport_u, 2));
     viewport_upper_left = v.subtract(&viewport_upper_left, &v.divide(&viewport_v, 2));
 
