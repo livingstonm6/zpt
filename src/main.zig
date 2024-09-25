@@ -3,6 +3,7 @@ const c = @import("color.zig");
 const v = @import("vec3.zig");
 const r = @import("ray.zig");
 const h = @import("hittable.zig");
+const interval = @import("interval.zig");
 
 fn rayColor(ray: *const r.ray, world: *const h.HittableList) c.color {
     var record = h.HitRecord{
@@ -11,7 +12,7 @@ fn rayColor(ray: *const r.ray, world: *const h.HittableList) c.color {
         .t = undefined,
         .front_face = undefined,
     };
-    if (world.hit(ray, 0, std.math.inf(f64), &record)) {
+    if (world.hit(ray, interval.Interval{ .min = 0, .max = std.math.inf(f64) }, &record)) {
         return v.multiply(&v.add(&record.normal, &v.vec3{ .x = 1, .y = 1, .z = 1 }), 0.5);
     }
 

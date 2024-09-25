@@ -1,6 +1,7 @@
 const std = @import("std");
 const v = @import("vec3.zig");
 const r = @import("ray.zig");
+const i = @import("interval.zig");
 
 pub const HitRecord = struct {
     point: v.point3,
@@ -21,7 +22,7 @@ pub const Sphere = struct {
     center: v.point3,
     radius: f64,
 
-    pub fn hit(self: Sphere, ray: *const r.ray, ray_tmin: f64, ray_tmax: f64, record: *HitRecord) bool {
+    pub fn hit(self: Sphere, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         const oc = v.subtract(&self.center, &ray.origin);
         const a = v.lengthSquared(&ray.direction);
         const h = v.dotProduct(&ray.direction, &oc);
@@ -36,9 +37,9 @@ pub const Sphere = struct {
         // find nearest root that lies in acceptable range
 
         var root = (h - sqrtd) / a;
-        if ((root <= ray_tmin) or (ray_tmax <= root)) {
+        if (!ray_t.surrounds(root)) {
             root = (h + sqrtd) / a;
-            if ((root <= ray_tmin) or (ray_tmax <= root)) {
+            if (!ray_t.surrounds(root)) {
                 return false;
             }
         }
@@ -78,7 +79,7 @@ pub const HittableList = struct {
         return self.objects.len;
     }
 
-    pub fn hit(self: HittableList, ray: *const r.ray, ray_tmin: f64, ray_tmax: f64, record: *HitRecord) bool {
+    pub fn hit(self: HittableList, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         var temp_record = HitRecord{
             .point = undefined,
             .normal = undefined,
@@ -86,10 +87,10 @@ pub const HittableList = struct {
             .front_face = undefined,
         };
         var hit_anything = false;
-        var closest_so_far = ray_tmax;
+        var closest_so_far = ray_t.max;
 
         for (self.objects.items) |object| {
-            if (object.hit(ray, ray_tmin, closest_so_far, &temp_record)) {
+            if (object.hit(ray, i.Interval{ .min = ray_t.min, .max = closest_so_far }, &temp_record)) {
                 hit_anything = true;
                 closest_so_far = temp_record.t;
                 record.* = temp_record;
@@ -104,9 +105,9 @@ pub const Hittable = union(enum) {
     sphere: Sphere,
     hittableList: HittableList,
 
-    pub fn hit(self: Hittable, ray: *const r.ray, ray_tmin: f64, ray_tmax: f64, record: *HitRecord) bool {
+    pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {
-            inline else => |case| return case.hit(ray, ray_tmin, ray_tmax, record),
+            inline else => |case| return case.hit(ray, ray_t, record),
         }
     }
 };
