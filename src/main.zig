@@ -5,11 +5,6 @@ const r = @import("ray.zig");
 const h = @import("hittable.zig");
 
 fn rayColor(ray: *const r.ray, world: *const h.HittableList) c.color {
-    // const t = hitSphere(&v.point3{ .x = 0, .y = 0, .z = -1 }, 0.5, ray);
-    // if (t > 0.0) {
-    //     const n = v.unit(&v.subtract(&r.at(ray, t), &v.vec3{ .x = 0, .y = 0, .z = -1 }));
-    //     return v.multiply(&c.color{ .x = n.x + 1, .y = n.y + 1, .z = n.z + 1 }, 0.5);
-    // }
     var record = h.HitRecord{
         .point = undefined,
         .normal = undefined,
@@ -80,17 +75,7 @@ pub fn main() !void {
 
     for (0..image_height) |j| {
         std.log.info("Scanline {} of {}.", .{ j, image_height });
-        if (j == 48) {
-            var k = j;
-            k += 1;
-        }
-
         for (0..image_width) |i| {
-            if (j == 48 and i == 189) {
-                var k = j;
-                k += 1;
-            }
-
             const delta_u = v.multiply(&pixel_delta_u, @as(f64, @floatFromInt(i)));
             const delta_v = v.multiply(&pixel_delta_v, @as(f64, @floatFromInt(j)));
             const pixel_center = v.add(&v.add(&delta_u, &delta_v), &first_pixel_location);

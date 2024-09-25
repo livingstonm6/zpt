@@ -88,8 +88,6 @@ pub const HittableList = struct {
         var hit_anything = false;
         var closest_so_far = ray_tmax;
 
-        //std.log.debug("self.objects.items:{any}", .{self.objects.items});
-
         for (self.objects.items) |object| {
             if (object.hit(ray, ray_tmin, closest_so_far, &temp_record)) {
                 hit_anything = true;
