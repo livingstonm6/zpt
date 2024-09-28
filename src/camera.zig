@@ -3,11 +3,14 @@ const h = @import("hittable.zig");
 const v = @import("vec3.zig");
 const r = @import("ray.zig");
 const c = @import("color.zig");
+const util = @import("util.zig");
 const interval = @import("interval.zig");
 
 pub const Camera = struct {
     aspect_ratio: f64 = 16.0 / 9.0,
     image_width: u16 = 400,
+    samples_per_pixel: u8 = 10,
+    pixel_samples_scale: f64 = undefined,
     image_height: u16 = undefined,
     center: v.point3 = undefined,
     pixel00_loc: v.point3 = undefined,
@@ -16,6 +19,7 @@ pub const Camera = struct {
 
     fn init(self: *Camera) void {
         self.image_width = 400;
+        self.pixel_samples_scale = 1.0 / @as(f64, @floatFromInt(self.samples_per_pixel));
 
         // Calculate image height (min 1)
         self.image_height = @as(u16, @intFromFloat(@as(f64, @floatFromInt(self.image_width)) / self.aspect_ratio));
@@ -65,6 +69,33 @@ pub const Camera = struct {
         return v.add(&term1, &term2);
     }
 
+    fn sampleSquare(self: Camera) !v.vec3 {
+        _ = self;
+        const rand1 = try util.randomF64();
+        const rand2 = try util.randomF64();
+        return v.vec3{
+            .x = rand1 - 0.5,
+            .y = rand2 - 0.5,
+            .z = 0,
+        };
+    }
+
+    fn getRay(self: Camera, i: f64, j: f64) !r.ray {
+        const offset = try self.sampleSquare();
+        var pixel_sample = self.pixel00_loc;
+        const delta_u = v.multiply(&self.pixel_delta_u, (i + offset.x));
+        const delta_v = v.multiply(&self.pixel_delta_v, (j + offset.y));
+        pixel_sample = v.add(&pixel_sample, &delta_u);
+        pixel_sample = v.add(&pixel_sample, &delta_v);
+        const ray_origin = self.center;
+        const ray_direction = v.subtract(&pixel_sample, &ray_origin);
+
+        return r.ray{
+            .origin = ray_origin,
+            .direction = ray_direction,
+        };
+    }
+
     pub fn render(self: *Camera, world: *const h.Hittable) !void {
         self.init();
 
@@ -77,14 +108,16 @@ pub const Camera = struct {
         for (0..self.image_height) |j| {
             std.log.info("Scanline {} of {}.", .{ j, self.image_height });
             for (0..self.image_width) |i| {
-                const delta_u = v.multiply(&self.pixel_delta_u, @as(f64, @floatFromInt(i)));
-                const delta_v = v.multiply(&self.pixel_delta_v, @as(f64, @floatFromInt(j)));
-                const pixel_center = v.add(&v.add(&delta_u, &delta_v), &self.pixel00_loc);
+                var pixel_color = c.color{ .x = 0, .y = 0, .z = 0 };
+                for (0..self.samples_per_pixel) |sample| {
+                    _ = sample;
+                    const i_float = @as(f64, @floatFromInt(i));
+                    const j_float = @as(f64, @floatFromInt(j));
+                    const ray = try self.getRay(i_float, j_float);
+                    pixel_color = v.add(&pixel_color, &self.rayColor(&ray, world));
+                }
 
-                const ray_direction = v.subtract(&pixel_center, &self.center);
-
-                const ray = r.ray{ .origin = self.center, .direction = ray_direction };
-                const pixel_color: c.color = self.rayColor(&ray, world);
+                pixel_color = v.multiply(&pixel_color, self.pixel_samples_scale);
 
                 try c.writeColor(stdout, &pixel_color);
             }

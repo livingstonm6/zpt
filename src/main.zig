@@ -18,6 +18,7 @@ pub fn main() !void {
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 0, .y = -100.5, .z = -1 }, .radius = 100 } });
 
     var camera = cam.Camera{};
+    camera.samples_per_pixel = 100;
 
     try camera.render(&world);
 }
