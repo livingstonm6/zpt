@@ -19,6 +19,7 @@ pub fn main() !void {
 
     var camera = cam.Camera{};
     camera.samples_per_pixel = 100;
+    camera.max_recursion_depth = 50;
 
     try camera.render(&world);
 }

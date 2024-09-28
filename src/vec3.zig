@@ -1,4 +1,5 @@
 const std = @import("std");
+const util = @import("util.zig");
 
 pub const vec3 = struct {
     x: f64,
@@ -38,6 +39,40 @@ pub fn length(v: *const vec3) f64 {
 
 pub fn unit(v: *const vec3) vec3 {
     return divide(v, length(v));
+}
+
+pub fn random() !vec3 {
+    return vec3{
+        .x = try util.randomF64(),
+        .y = try util.randomF64(),
+        .z = try util.randomF64(),
+    };
+}
+
+pub fn randomRange(min: f64, max: f64) !vec3 {
+    return vec3{
+        .x = try util.randomF64Range(min, max),
+        .y = try util.randomF64Range(min, max),
+        .z = try util.randomF64Range(min, max),
+    };
+}
+
+pub fn randomUnit() !vec3 {
+    while (true) {
+        const p = try randomRange(-1, 1);
+        const lenSq = lengthSquared(&p);
+        if (1e-160 < lenSq and lenSq <= 1) {
+            return divide(&p, std.math.sqrt(lenSq));
+        }
+    }
+}
+
+pub fn randomOnHemisphere(normal: *const vec3) !vec3 {
+    const on_unit_sphere = try randomUnit();
+    if (dotProduct(&on_unit_sphere, normal) > 0.0) {
+        return on_unit_sphere;
+    }
+    return multiply(&on_unit_sphere, -1);
 }
 
 test "add" {

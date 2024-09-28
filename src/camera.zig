@@ -10,6 +10,7 @@ pub const Camera = struct {
     aspect_ratio: f64 = 16.0 / 9.0,
     image_width: u16 = 400,
     samples_per_pixel: u8 = 10,
+    max_recursion_depth: u8 = 10,
     pixel_samples_scale: f64 = undefined,
     image_height: u16 = undefined,
     center: v.point3 = undefined,
@@ -48,16 +49,24 @@ pub const Camera = struct {
         self.pixel00_loc = v.add(&viewport_upper_left, &v.multiply(&v.add(&self.pixel_delta_u, &self.pixel_delta_v), 0.5));
     }
 
-    fn rayColor(self: *Camera, ray: *const r.ray, world: *const h.Hittable) c.color {
-        _ = self;
+    fn rayColor(self: *Camera, ray: *const r.ray, world: *const h.Hittable, depth: u8) !c.color {
+        if (depth <= 0) {
+            return c.color{ .x = 0, .y = 0, .z = 0 };
+        }
+
         var record = h.HitRecord{
             .point = undefined,
             .normal = undefined,
             .t = undefined,
             .front_face = undefined,
         };
-        if (world.hit(ray, interval.Interval{ .min = 0, .max = std.math.inf(f64) }, &record)) {
-            return v.multiply(&v.add(&record.normal, &v.vec3{ .x = 1, .y = 1, .z = 1 }), 0.5);
+        if (world.hit(ray, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, &record)) {
+            const bounce_direction = try v.randomOnHemisphere(&record.normal);
+            const bounce_ray = r.ray{ .origin = record.point, .direction = bounce_direction };
+            const ray_color = try self.rayColor(&bounce_ray, world, depth - 1);
+            return v.multiply(&ray_color, 0.5);
+
+            //return v.multiply(&v.add(&record.normal, &v.vec3{ .x = 1, .y = 1, .z = 1 }), 0.5);
         }
 
         // lerp
@@ -114,7 +123,8 @@ pub const Camera = struct {
                     const i_float = @as(f64, @floatFromInt(i));
                     const j_float = @as(f64, @floatFromInt(j));
                     const ray = try self.getRay(i_float, j_float);
-                    pixel_color = v.add(&pixel_color, &self.rayColor(&ray, world));
+                    const ray_color = try self.rayColor(&ray, world, self.max_recursion_depth);
+                    pixel_color = v.add(&pixel_color, &ray_color);
                 }
 
                 pixel_color = v.multiply(&pixel_color, self.pixel_samples_scale);
