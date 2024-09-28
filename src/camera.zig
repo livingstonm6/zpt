@@ -61,7 +61,8 @@ pub const Camera = struct {
             .front_face = undefined,
         };
         if (world.hit(ray, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, &record)) {
-            const bounce_direction = try v.randomOnHemisphere(&record.normal);
+            const rand = try v.randomOnHemisphere(&record.normal);
+            const bounce_direction = v.add(&record.normal, &rand);
             const bounce_ray = r.ray{ .origin = record.point, .direction = bounce_direction };
             const ray_color = try self.rayColor(&bounce_ray, world, depth - 1);
             return v.multiply(&ray_color, 0.5);
