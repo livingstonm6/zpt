@@ -2,9 +2,9 @@ const std = @import("std");
 const util = @import("util.zig");
 
 pub const vec3 = struct {
-    x: f64,
-    y: f64,
-    z: f64,
+    x: f64 = 0,
+    y: f64 = 0,
+    z: f64 = 0,
 };
 
 pub const point3 = vec3;
@@ -23,6 +23,14 @@ pub fn dotProduct(v1: *const vec3, v2: *const vec3) f64 {
 
 pub fn multiply(v: *const vec3, c: f64) vec3 {
     return vec3{ .x = v.x * c, .y = v.y * c, .z = v.z * c };
+}
+
+pub fn vecMultiply(v1: *const vec3, v2: *const vec3) vec3 {
+    return vec3{
+        .x = v1.x * v2.x,
+        .y = v1.y * v2.y,
+        .z = v1.z * v2.z,
+    };
 }
 
 pub fn divide(v: *const vec3, c: f64) vec3 {
@@ -73,6 +81,16 @@ pub fn randomOnHemisphere(normal: *const vec3) !vec3 {
         return on_unit_sphere;
     }
     return multiply(&on_unit_sphere, -1);
+}
+
+pub fn nearZero(v: *const vec3) bool {
+    const s = 1e-8;
+    return @abs(v.x) < s and @abs(v.y) < s and @abs(v.z) < s;
+}
+
+pub fn reflect(v: *const vec3, n: *const vec3) vec3 {
+    const term2 = multiply(n, 2 * dotProduct(v, n));
+    return subtract(v, &term2);
 }
 
 test "add" {

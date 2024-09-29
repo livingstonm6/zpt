@@ -19,7 +19,6 @@ pub const Camera = struct {
     pixel_delta_v: v.vec3 = undefined,
 
     fn init(self: *Camera) void {
-        self.image_width = 400;
         self.pixel_samples_scale = 1.0 / @as(f64, @floatFromInt(self.samples_per_pixel));
 
         // Calculate image height (min 1)
@@ -57,17 +56,21 @@ pub const Camera = struct {
         var record = h.HitRecord{
             .point = undefined,
             .normal = undefined,
+            .mat = undefined,
             .t = undefined,
             .front_face = undefined,
         };
         if (world.hit(ray, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, &record)) {
-            const rand = try v.randomOnHemisphere(&record.normal);
-            const bounce_direction = v.add(&record.normal, &rand);
-            const bounce_ray = r.ray{ .origin = record.point, .direction = bounce_direction };
-            const ray_color = try self.rayColor(&bounce_ray, world, depth - 1);
-            return v.multiply(&ray_color, 0.5);
-
-            //return v.multiply(&v.add(&record.normal, &v.vec3{ .x = 1, .y = 1, .z = 1 }), 0.5);
+            var scattered = r.ray{};
+            var attenuation = c.color{};
+            const p_scat: *r.ray = &scattered;
+            const p_att: *c.color = &attenuation;
+            //std.log.debug("scattered: {any} {}\nattenuation: {any} {}\nray: {any} {}", .{ scattered, p_scat, attenuation, p_att, ray, &ray });
+            if (try record.mat.scatter(ray, record, p_att, p_scat)) {
+                const ray_color = try self.rayColor(p_scat, world, depth - 1);
+                return v.vecMultiply(&ray_color, p_att);
+            }
+            return c.color{};
         }
 
         // lerp
@@ -107,6 +110,8 @@ pub const Camera = struct {
     }
 
     pub fn render(self: *Camera, world: *const h.Hittable) !void {
+        const before = std.time.milliTimestamp();
+
         self.init();
 
         const stdout_file = std.io.getStdOut().writer();
@@ -133,8 +138,12 @@ pub const Camera = struct {
                 try c.writeColor(stdout, &pixel_color);
             }
         }
+        const after = std.time.milliTimestamp();
+        const time_ms = after - before;
+        const time_s: f64 = @as(f64, @floatFromInt(time_ms)) / 1000.0;
+        const time_m: f64 = time_s / 60.0;
 
-        std.log.info("Complete!", .{});
+        std.log.info("Completed in {}ms ({}s, {} minutes)!", .{ time_ms, time_s, time_m });
 
         try bw.flush();
     }

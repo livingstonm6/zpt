@@ -2,10 +2,12 @@ const std = @import("std");
 const v = @import("vec3.zig");
 const r = @import("ray.zig");
 const i = @import("interval.zig");
+const m = @import("material.zig");
 
 pub const HitRecord = struct {
     point: v.point3,
     normal: v.vec3,
+    mat: *const m.Material,
     t: f64,
     front_face: bool,
 
@@ -21,6 +23,7 @@ pub const HitRecord = struct {
 pub const Sphere = struct {
     center: v.point3,
     radius: f64,
+    mat: m.Material,
 
     pub fn hit(self: Sphere, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         const oc = v.subtract(&self.center, &ray.origin);
@@ -48,6 +51,7 @@ pub const Sphere = struct {
         record.point = r.at(ray, record.t);
         const outward_normal = v.divide(&v.subtract(&record.point, &self.center), self.radius);
         record.setFaceNormal(ray, &outward_normal);
+        record.mat = &self.mat;
 
         return true;
     }
@@ -83,6 +87,7 @@ pub const HittableList = struct {
         var temp_record = HitRecord{
             .point = undefined,
             .normal = undefined,
+            .mat = undefined,
             .t = undefined,
             .front_face = undefined,
         };
