@@ -1,6 +1,6 @@
 const std = @import("std");
 const h = @import("hittable.zig");
-const v = @import("vec3.zig");
+const vec = @import("vec3.zig");
 const r = @import("ray.zig");
 const c = @import("color.zig");
 const util = @import("util.zig");
@@ -13,39 +13,54 @@ pub const Camera = struct {
     max_recursion_depth: u8 = 10,
     pixel_samples_scale: f64 = undefined,
     image_height: u16 = undefined,
-    center: v.point3 = undefined,
-    pixel00_loc: v.point3 = undefined,
-    pixel_delta_u: v.vec3 = undefined,
-    pixel_delta_v: v.vec3 = undefined,
+    center: vec.point3 = undefined,
+    pixel00_loc: vec.point3 = undefined,
+    pixel_delta_u: vec.vec3 = undefined,
+    pixel_delta_v: vec.vec3 = undefined,
+    vertical_fov: f64 = 90,
+    look_from: vec.point3 = vec.point3{},
+    look_at: vec.point3 = vec.point3{ .x = 0, .y = 0, .z = -1 },
+    v_up: vec.vec3 = vec.vec3{ .x = 0, .y = 1, .z = 0 },
+    u: vec.vec3 = undefined,
+    v: vec.vec3 = undefined,
+    w: vec.vec3 = undefined,
 
     fn init(self: *Camera) void {
         self.pixel_samples_scale = 1.0 / @as(f64, @floatFromInt(self.samples_per_pixel));
+
+        self.center = self.look_from;
 
         // Calculate image height (min 1)
         self.image_height = @as(u16, @intFromFloat(@as(f64, @floatFromInt(self.image_width)) / self.aspect_ratio));
         if (self.image_height < 1) self.image_height = 1;
 
         // Camera
-        const focal_length: f64 = 1.0;
-        const viewport_height: f64 = 2.0;
+        const focal_length: f64 = vec.length(&vec.subtract(&self.look_at, &self.look_from));
+        const theta = std.math.degreesToRadians(self.vertical_fov);
+        const h_var = std.math.tan(theta / 2);
+        const viewport_height: f64 = 2.0 * h_var * focal_length;
         const width_over_height: f64 = @as(f64, @floatFromInt(self.image_width)) / @as(f64, @floatFromInt(self.image_height));
         const viewport_width: f64 = viewport_height * width_over_height;
-        self.center = v.point3{ .x = 0, .y = 0, .z = 0 };
+
+        // Calculate u, v, w unit basis vectors for the camera coordinate frame
+        self.w = vec.unit(&vec.subtract(&self.look_from, &self.look_at));
+        self.u = vec.unit(&vec.cross(&self.v_up, &self.w));
+        self.v = vec.cross(&self.w, &self.u);
 
         // Calculate viewport edge vectors
-        const viewport_u = v.vec3{ .x = viewport_width, .y = 0, .z = 0 };
-        const viewport_v = v.vec3{ .x = 0, .y = -viewport_height, .z = 0 };
+        const viewport_u = vec.multiply(&self.u, viewport_width);
+        const viewport_v = vec.multiply(&vec.multiply(&self.v, -1), viewport_height);
 
         // Calculate horizontal + vertical vectors from pixel to pixel
-        self.pixel_delta_u = v.divide(&viewport_u, @as(f64, @floatFromInt(self.image_width)));
-        self.pixel_delta_v = v.divide(&viewport_v, @as(f64, @floatFromInt(self.image_height)));
+        self.pixel_delta_u = vec.divide(&viewport_u, @as(f64, @floatFromInt(self.image_width)));
+        self.pixel_delta_v = vec.divide(&viewport_v, @as(f64, @floatFromInt(self.image_height)));
 
         // Calculate position of the upper left pixel
-        var viewport_upper_left = v.subtract(&self.center, &v.vec3{ .x = 0, .y = 0, .z = focal_length });
-        viewport_upper_left = v.subtract(&viewport_upper_left, &v.divide(&viewport_u, 2));
-        viewport_upper_left = v.subtract(&viewport_upper_left, &v.divide(&viewport_v, 2));
+        var viewport_upper_left = vec.subtract(&self.center, &vec.multiply(&self.w, focal_length));
+        viewport_upper_left = vec.subtract(&viewport_upper_left, &vec.divide(&viewport_u, 2));
+        viewport_upper_left = vec.subtract(&viewport_upper_left, &vec.divide(&viewport_v, 2));
 
-        self.pixel00_loc = v.add(&viewport_upper_left, &v.multiply(&v.add(&self.pixel_delta_u, &self.pixel_delta_v), 0.5));
+        self.pixel00_loc = vec.add(&viewport_upper_left, &vec.multiply(&vec.add(&self.pixel_delta_u, &self.pixel_delta_v), 0.5));
     }
 
     fn rayColor(self: *Camera, ray: *const r.ray, world: *const h.Hittable, depth: u8) !c.color {
@@ -65,28 +80,27 @@ pub const Camera = struct {
             var attenuation = c.color{};
             const p_scat: *r.ray = &scattered;
             const p_att: *c.color = &attenuation;
-            //std.log.debug("scattered: {any} {}\nattenuation: {any} {}\nray: {any} {}", .{ scattered, p_scat, attenuation, p_att, ray, &ray });
             if (try record.mat.scatter(ray, record, p_att, p_scat)) {
                 const ray_color = try self.rayColor(p_scat, world, depth - 1);
-                return v.vecMultiply(&ray_color, p_att);
+                return vec.vecMultiply(&ray_color, p_att);
             }
             return c.color{};
         }
 
         // lerp
-        const unit_direction = v.unit(&ray.direction);
+        const unit_direction = vec.unit(&ray.direction);
         const a = 0.5 * (unit_direction.y + 1.0);
 
-        const term1 = v.multiply(&v.vec3{ .x = 1.0, .y = 1.0, .z = 1.0 }, (1.0 - a));
-        const term2 = v.multiply(&v.vec3{ .x = 0.5, .y = 0.7, .z = 1.0 }, a);
-        return v.add(&term1, &term2);
+        const term1 = vec.multiply(&vec.vec3{ .x = 1.0, .y = 1.0, .z = 1.0 }, (1.0 - a));
+        const term2 = vec.multiply(&vec.vec3{ .x = 0.5, .y = 0.7, .z = 1.0 }, a);
+        return vec.add(&term1, &term2);
     }
 
-    fn sampleSquare(self: Camera) !v.vec3 {
+    fn sampleSquare(self: Camera) !vec.vec3 {
         _ = self;
         const rand1 = try util.randomF64();
         const rand2 = try util.randomF64();
-        return v.vec3{
+        return vec.vec3{
             .x = rand1 - 0.5,
             .y = rand2 - 0.5,
             .z = 0,
@@ -96,12 +110,12 @@ pub const Camera = struct {
     fn getRay(self: Camera, i: f64, j: f64) !r.ray {
         const offset = try self.sampleSquare();
         var pixel_sample = self.pixel00_loc;
-        const delta_u = v.multiply(&self.pixel_delta_u, (i + offset.x));
-        const delta_v = v.multiply(&self.pixel_delta_v, (j + offset.y));
-        pixel_sample = v.add(&pixel_sample, &delta_u);
-        pixel_sample = v.add(&pixel_sample, &delta_v);
+        const delta_u = vec.multiply(&self.pixel_delta_u, (i + offset.x));
+        const delta_v = vec.multiply(&self.pixel_delta_v, (j + offset.y));
+        pixel_sample = vec.add(&pixel_sample, &delta_u);
+        pixel_sample = vec.add(&pixel_sample, &delta_v);
         const ray_origin = self.center;
-        const ray_direction = v.subtract(&pixel_sample, &ray_origin);
+        const ray_direction = vec.subtract(&pixel_sample, &ray_origin);
 
         return r.ray{
             .origin = ray_origin,
@@ -130,10 +144,10 @@ pub const Camera = struct {
                     const j_float = @as(f64, @floatFromInt(j));
                     const ray = try self.getRay(i_float, j_float);
                     const ray_color = try self.rayColor(&ray, world, self.max_recursion_depth);
-                    pixel_color = v.add(&pixel_color, &ray_color);
+                    pixel_color = vec.add(&pixel_color, &ray_color);
                 }
 
-                pixel_color = v.multiply(&pixel_color, self.pixel_samples_scale);
+                pixel_color = vec.multiply(&pixel_color, self.pixel_samples_scale);
 
                 try c.writeColor(stdout, &pixel_color);
             }

@@ -25,6 +25,14 @@ pub fn multiply(v: *const vec3, c: f64) vec3 {
     return vec3{ .x = v.x * c, .y = v.y * c, .z = v.z * c };
 }
 
+pub fn cross(v1: *const vec3, v2: *const vec3) vec3 {
+    return vec3{
+        .x = v1.y * v2.z - v1.z * v2.y,
+        .y = v1.z * v2.x - v1.x * v2.z,
+        .z = v1.x * v2.y - v1.y * v2.x,
+    };
+}
+
 pub fn vecMultiply(v1: *const vec3, v2: *const vec3) vec3 {
     return vec3{
         .x = v1.x * v2.x,
@@ -119,6 +127,28 @@ test "subtract" {
     const v2 = vec3{ .x = 1, .y = 2, .z = 3 };
     const v3 = vec3{ .x = 0, .y = 1, .z = 2 };
     const result = subtract(&v2, &v1);
+
+    try std.testing.expectEqual(result.x, v3.x);
+    try std.testing.expectEqual(result.y, v3.y);
+    try std.testing.expectEqual(result.z, v3.z);
+}
+
+test "cross" {
+    const v1 = vec3{ .x = 1, .y = 0, .z = 0 };
+    const v2 = vec3{ .x = 0, .y = 1, .z = 0 };
+    const v3 = vec3{ .x = 0, .y = 0, .z = 1 };
+    const result = cross(&v1, &v2);
+
+    try std.testing.expectEqual(result.x, v3.x);
+    try std.testing.expectEqual(result.y, v3.y);
+    try std.testing.expectEqual(result.z, v3.z);
+}
+
+test "cross 2" {
+    const v1 = vec3{ .x = -1, .y = 0, .z = 1 };
+    const v2 = vec3{ .x = 1, .y = 1, .z = 1 };
+    const v3 = vec3{ .x = -1, .y = 2, .z = -1 };
+    const result = cross(&v1, &v2);
 
     try std.testing.expectEqual(result.x, v3.x);
     try std.testing.expectEqual(result.y, v3.y);
