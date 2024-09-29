@@ -21,9 +21,11 @@ pub fn main() !void {
     const mat_center = m.Material{ .lambertian = m.Lambertian{
         .albedo = c.color{ .x = 0.1, .y = 0.2, .z = 0.5 },
     } };
-    const mat_left = m.Material{ .metal = m.Metal{
-        .albedo = c.color{ .x = 0.8, .y = 0.8, .z = 0.8 },
-        .fuzz = 0.3,
+    const mat_left = m.Material{ .dielectric = m.Dielectric{
+        .refraction_index = 1.50,
+    } };
+    const mat_bubble = m.Material{ .dielectric = m.Dielectric{
+        .refraction_index = 1.00 / 1.50,
     } };
     const mat_right = m.Material{ .metal = m.Metal{
         .albedo = c.color{ .x = 0.8, .y = 0.6, .z = 0.2 },
@@ -34,6 +36,7 @@ pub fn main() !void {
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 0, .y = -100.5, .z = -1 }, .radius = 100.0, .mat = mat_ground } });
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 0, .y = 0.0, .z = -1.2 }, .radius = 0.5, .mat = mat_center } });
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = -1.0, .y = 0.0, .z = -1.0 }, .radius = 0.5, .mat = mat_left } });
+    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = -1.0, .y = 0.0, .z = -1.0 }, .radius = 0.4, .mat = mat_bubble } });
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 1.0, .y = 0.0, .z = -1.0 }, .radius = 0.5, .mat = mat_right } });
 
     // Set up camera and render

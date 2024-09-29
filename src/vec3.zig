@@ -93,6 +93,16 @@ pub fn reflect(v: *const vec3, n: *const vec3) vec3 {
     return subtract(v, &term2);
 }
 
+pub fn refract(uv: *const vec3, n: *const vec3, etai_over_etat: f64) vec3 {
+    var cos_theta = dotProduct(&multiply(uv, -1), n);
+    if (cos_theta > 1.0) {
+        cos_theta = 1.0;
+    }
+    const r_out_perp = multiply(&add(uv, &multiply(n, cos_theta)), etai_over_etat);
+    const r_out_parallel = multiply(n, -std.math.sqrt(@abs(1.0 - lengthSquared(&r_out_perp))));
+    return add(&r_out_perp, &r_out_parallel);
+}
+
 test "add" {
     const v1 = vec3{ .x = 1, .y = 1, .z = 1 };
     const v2 = vec3{ .x = 1, .y = 2, .z = 3 };
