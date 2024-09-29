@@ -23,12 +23,15 @@ pub const Lambertian = struct {
 
 pub const Metal = struct {
     albedo: c.color,
+    fuzz: f64 = 1.0,
 
     pub fn scatter(self: Metal, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
-        const reflected = v.reflect(&ray_in.direction, &record.normal);
+        var reflected = v.reflect(&ray_in.direction, &record.normal);
+        reflected = v.unit(&reflected);
+        reflected = v.add(&reflected, &v.multiply(&try v.randomUnit(), self.fuzz));
         scattered.* = r.ray{ .origin = record.point, .direction = reflected };
         attenuation.* = self.albedo;
-        return true;
+        return v.dotProduct(&scattered.direction, &record.normal) > 0;
     }
 };
 

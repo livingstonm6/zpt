@@ -23,22 +23,22 @@ pub fn main() !void {
     } };
     const mat_left = m.Material{ .metal = m.Metal{
         .albedo = c.color{ .x = 0.8, .y = 0.8, .z = 0.8 },
+        .fuzz = 0.3,
     } };
     const mat_right = m.Material{ .metal = m.Metal{
         .albedo = c.color{ .x = 0.8, .y = 0.6, .z = 0.2 },
+        .fuzz = 1.0,
     } };
 
     // Set up scene
-    try world.hittableList.push(h.Hittable{
-        .sphere = h.Sphere{ .center = v.point3{ .x = 0, .y = -100.5, .z = -1 }, .radius = 100.0, .mat = mat_ground },
-    });
+    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 0, .y = -100.5, .z = -1 }, .radius = 100.0, .mat = mat_ground } });
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 0, .y = 0.0, .z = -1.2 }, .radius = 0.5, .mat = mat_center } });
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = -1.0, .y = 0.0, .z = -1.0 }, .radius = 0.5, .mat = mat_left } });
     try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = v.point3{ .x = 1.0, .y = 0.0, .z = -1.0 }, .radius = 0.5, .mat = mat_right } });
 
     // Set up camera and render
     var camera = cam.Camera{};
-    camera.image_width = 1920;
+    camera.image_width = 400;
     camera.samples_per_pixel = 100;
     camera.max_recursion_depth = 50;
 
