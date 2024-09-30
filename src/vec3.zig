@@ -83,6 +83,15 @@ pub fn randomUnit() !vec3 {
     }
 }
 
+pub fn randomInUnitDisk() !vec3 {
+    while (true) {
+        const p = vec3{ .x = try util.randomF64Range(-1, 1), .y = try util.randomF64Range(-1, 1), .z = 0 };
+        if (lengthSquared(&p) < 1) {
+            return p;
+        }
+    }
+}
+
 pub fn randomOnHemisphere(normal: *const vec3) !vec3 {
     const on_unit_sphere = try randomUnit();
     if (dotProduct(&on_unit_sphere, normal) > 0.0) {

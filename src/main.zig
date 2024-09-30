@@ -44,10 +44,14 @@ pub fn main() !void {
     camera.image_width = 400;
     camera.samples_per_pixel = 100;
     camera.max_recursion_depth = 50;
-    camera.vertical_fov = 90;
+
+    camera.vertical_fov = 20;
     camera.look_from = v.point3{ .x = -2, .y = 2, .z = 1 };
     camera.look_at = v.point3{ .x = 0, .y = 0, .z = -1 };
     camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 10.0;
+    camera.focus_dist = 3.4;
 
     try camera.render(&world);
 }

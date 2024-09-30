@@ -17,6 +17,7 @@ pub const Camera = struct {
     pixel00_loc: vec.point3 = undefined,
     pixel_delta_u: vec.vec3 = undefined,
     pixel_delta_v: vec.vec3 = undefined,
+    // Camera position
     vertical_fov: f64 = 90,
     look_from: vec.point3 = vec.point3{},
     look_at: vec.point3 = vec.point3{ .x = 0, .y = 0, .z = -1 },
@@ -24,6 +25,11 @@ pub const Camera = struct {
     u: vec.vec3 = undefined,
     v: vec.vec3 = undefined,
     w: vec.vec3 = undefined,
+    // Depth of field
+    dof_angle: f64 = 0,
+    focus_dist: f64 = 10,
+    dof_disk_u: vec.vec3 = undefined,
+    dof_disk_v: vec.vec3 = undefined,
 
     fn init(self: *Camera) void {
         self.pixel_samples_scale = 1.0 / @as(f64, @floatFromInt(self.samples_per_pixel));
@@ -35,10 +41,9 @@ pub const Camera = struct {
         if (self.image_height < 1) self.image_height = 1;
 
         // Camera
-        const focal_length: f64 = vec.length(&vec.subtract(&self.look_at, &self.look_from));
         const theta = std.math.degreesToRadians(self.vertical_fov);
         const h_var = std.math.tan(theta / 2);
-        const viewport_height: f64 = 2.0 * h_var * focal_length;
+        const viewport_height: f64 = 2.0 * h_var * self.focus_dist;
         const width_over_height: f64 = @as(f64, @floatFromInt(self.image_width)) / @as(f64, @floatFromInt(self.image_height));
         const viewport_width: f64 = viewport_height * width_over_height;
 
@@ -56,11 +61,15 @@ pub const Camera = struct {
         self.pixel_delta_v = vec.divide(&viewport_v, @as(f64, @floatFromInt(self.image_height)));
 
         // Calculate position of the upper left pixel
-        var viewport_upper_left = vec.subtract(&self.center, &vec.multiply(&self.w, focal_length));
+        var viewport_upper_left = vec.subtract(&self.center, &vec.multiply(&self.w, self.focus_dist));
         viewport_upper_left = vec.subtract(&viewport_upper_left, &vec.divide(&viewport_u, 2));
         viewport_upper_left = vec.subtract(&viewport_upper_left, &vec.divide(&viewport_v, 2));
-
         self.pixel00_loc = vec.add(&viewport_upper_left, &vec.multiply(&vec.add(&self.pixel_delta_u, &self.pixel_delta_v), 0.5));
+
+        // Calculate camera defocus disk basis vectors
+        const dof_radius = self.focus_dist * std.math.tan(std.math.degreesToRadians(self.dof_angle / 2));
+        self.dof_disk_u = vec.multiply(&self.u, dof_radius);
+        self.dof_disk_v = vec.multiply(&self.v, dof_radius);
     }
 
     fn rayColor(self: *Camera, ray: *const r.ray, world: *const h.Hittable, depth: u8) !c.color {
@@ -114,13 +123,21 @@ pub const Camera = struct {
         const delta_v = vec.multiply(&self.pixel_delta_v, (j + offset.y));
         pixel_sample = vec.add(&pixel_sample, &delta_u);
         pixel_sample = vec.add(&pixel_sample, &delta_v);
-        const ray_origin = self.center;
+        const ray_origin = if (self.dof_angle <= 0) self.center else try self.dofDiskSample();
         const ray_direction = vec.subtract(&pixel_sample, &ray_origin);
 
         return r.ray{
             .origin = ray_origin,
             .direction = ray_direction,
         };
+    }
+
+    pub fn dofDiskSample(self: *const Camera) !vec.point3 {
+        const p = try vec.randomInUnitDisk();
+        var result = self.center;
+        result = vec.add(&result, &vec.multiply(&self.dof_disk_u, p.x));
+        result = vec.add(&result, &vec.multiply(&self.dof_disk_v, p.y));
+        return result;
     }
 
     pub fn render(self: *Camera, world: *const h.Hittable) !void {
