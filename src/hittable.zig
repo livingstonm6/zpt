@@ -7,7 +7,7 @@ const m = @import("material.zig");
 pub const HitRecord = struct {
     point: v.point3,
     normal: v.vec3,
-    mat: *const m.Material,
+    mat: m.Material,
     t: f64,
     front_face: bool,
 
@@ -52,7 +52,7 @@ pub const Sphere = struct {
         record.point = r.at(ray, record.t);
         const outward_normal = v.divide(&v.subtract(&record.point, &current_center), self.radius);
         record.setFaceNormal(ray, &outward_normal);
-        record.mat = &self.mat;
+        record.mat = self.mat;
 
         return true;
     }
@@ -86,17 +86,18 @@ pub const HittableList = struct {
 
     pub fn hit(self: HittableList, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         var temp_record = HitRecord{
-            .point = undefined,
-            .normal = undefined,
-            .mat = undefined,
-            .t = undefined,
-            .front_face = undefined,
+            .point = v.point3{},
+            .normal = v.vec3{},
+            .mat = m.Material{ .none = m.None{} },
+            .t = 0,
+            .front_face = false,
         };
+        const p_record: *HitRecord = &temp_record;
         var hit_anything = false;
         var closest_so_far = ray_t.max;
 
         for (self.objects.items) |object| {
-            if (object.hit(ray, i.Interval{ .min = ray_t.min, .max = closest_so_far }, &temp_record)) {
+            if (object.hit(ray, i.Interval{ .min = ray_t.min, .max = closest_so_far }, p_record)) {
                 hit_anything = true;
                 closest_so_far = temp_record.t;
                 record.* = temp_record;

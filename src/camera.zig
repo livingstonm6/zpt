@@ -5,6 +5,7 @@ const r = @import("ray.zig");
 const c = @import("color.zig");
 const util = @import("util.zig");
 const interval = @import("interval.zig");
+const m = @import("material.zig");
 
 pub const Camera = struct {
     aspect_ratio: f64 = 16.0 / 9.0,
@@ -78,13 +79,15 @@ pub const Camera = struct {
         }
 
         var record = h.HitRecord{
-            .point = undefined,
-            .normal = undefined,
-            .mat = undefined,
-            .t = undefined,
-            .front_face = undefined,
+            .point = vec.point3{},
+            .normal = vec.vec3{},
+            .mat = m.Material{ .none = m.None{} },
+            .t = 0,
+            .front_face = false,
         };
-        if (world.hit(ray, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, &record)) {
+        const p_rec: *h.HitRecord = &record;
+
+        if (world.hit(ray, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, p_rec)) {
             var scattered = r.ray{};
             var attenuation = c.color{};
             const p_scat: *r.ray = &scattered;
