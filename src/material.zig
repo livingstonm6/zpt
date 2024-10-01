@@ -71,8 +71,6 @@ pub const Dielectric = struct {
 };
 
 pub const None = struct {
-    albedo: c.color,
-
     pub fn scatter(self: None, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
         _ = .{ self, ray_in, record, attenuation, scattered };
         return false;
