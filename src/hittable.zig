@@ -21,12 +21,13 @@ pub const HitRecord = struct {
 };
 
 pub const Sphere = struct {
-    center: v.point3,
+    center: r.ray,
     radius: f64,
     mat: m.Material,
 
     pub fn hit(self: Sphere, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
-        const oc = v.subtract(&self.center, &ray.origin);
+        const current_center = r.at(&self.center, ray.time);
+        const oc = v.subtract(&current_center, &ray.origin);
         const a = v.lengthSquared(&ray.direction);
         const h = v.dotProduct(&ray.direction, &oc);
         const c_var = v.lengthSquared(&oc) - (self.radius * self.radius);
@@ -49,7 +50,7 @@ pub const Sphere = struct {
 
         record.t = root;
         record.point = r.at(ray, record.t);
-        const outward_normal = v.divide(&v.subtract(&record.point, &self.center), self.radius);
+        const outward_normal = v.divide(&v.subtract(&record.point, &current_center), self.radius);
         record.setFaceNormal(ray, &outward_normal);
         record.mat = &self.mat;
 

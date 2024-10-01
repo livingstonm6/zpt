@@ -9,15 +9,13 @@ pub const Lambertian = struct {
     albedo: c.color,
 
     pub fn scatter(self: Lambertian, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
-        _ = ray_in;
-
         var scattered_direction = v.add(&record.normal, &try v.randomUnit());
 
         if (v.nearZero(&scattered_direction)) {
             scattered_direction = record.normal;
         }
 
-        scattered.* = r.ray{ .origin = record.point, .direction = scattered_direction };
+        scattered.* = r.ray{ .origin = record.point, .direction = scattered_direction, .time = ray_in.time };
         attenuation.* = self.albedo;
         return true;
     }
@@ -31,7 +29,7 @@ pub const Metal = struct {
         var reflected = v.reflect(&ray_in.direction, &record.normal);
         reflected = v.unit(&reflected);
         reflected = v.add(&reflected, &v.multiply(&try v.randomUnit(), self.fuzz));
-        scattered.* = r.ray{ .origin = record.point, .direction = reflected };
+        scattered.* = r.ray{ .origin = record.point, .direction = reflected, .time = ray_in.time };
         attenuation.* = self.albedo;
         return v.dotProduct(&scattered.direction, &record.normal) > 0;
     }
@@ -67,7 +65,7 @@ pub const Dielectric = struct {
             direction = v.refract(&unit_direction, &record.normal, ri);
         }
 
-        scattered.* = r.ray{ .origin = record.point, .direction = direction };
+        scattered.* = r.ray{ .origin = record.point, .direction = direction, .time = ray_in.time };
         return true;
     }
 };

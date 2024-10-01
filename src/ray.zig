@@ -7,6 +7,7 @@ pub const ray = struct {
         .z = 0,
     },
     direction: v.vec3 = v.vec3{ .x = 0, .y = 0, .z = 0 },
+    time: f64 = 0,
 };
 
 pub fn at(r: *const ray, t: f64) v.point3 {

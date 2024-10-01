@@ -125,10 +125,12 @@ pub const Camera = struct {
         pixel_sample = vec.add(&pixel_sample, &delta_v);
         const ray_origin = if (self.dof_angle <= 0) self.center else try self.dofDiskSample();
         const ray_direction = vec.subtract(&pixel_sample, &ray_origin);
+        const ray_time = try util.randomF64();
 
         return r.ray{
             .origin = ray_origin,
             .direction = ray_direction,
+            .time = ray_time,
         };
     }
 
