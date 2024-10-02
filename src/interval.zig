@@ -22,6 +22,14 @@ pub const Interval = struct {
         if (x > self.max) return self.max;
         return x;
     }
+
+    pub fn expand(self: Interval, delta: f64) Interval {
+        const padding = delta / 2;
+        return Interval{
+            .min = self.min - padding,
+            .max = self.max + padding,
+        };
+    }
 };
 
 pub const empty = Interval{

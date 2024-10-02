@@ -120,6 +120,12 @@ pub fn refract(uv: *const vec3, n: *const vec3, etai_over_etat: f64) vec3 {
     return add(&r_out_perp, &r_out_parallel);
 }
 
+pub fn getByIndex(v: *const vec3, n: usize) f64 {
+    if (n == 0) return v.x;
+    if (n == 1) return v.y;
+    return v.z;
+}
+
 test "add" {
     const v1 = vec3{ .x = 1, .y = 1, .z = 1 };
     const v2 = vec3{ .x = 1, .y = 2, .z = 3 };
