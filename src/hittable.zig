@@ -3,6 +3,7 @@ const v = @import("vec3.zig");
 const r = @import("ray.zig");
 const i = @import("interval.zig");
 const m = @import("material.zig");
+const a = @import("aabb.zig");
 
 pub const HitRecord = struct {
     point: v.point3,
@@ -24,14 +25,38 @@ pub const Sphere = struct {
     center: r.ray,
     radius: f64,
     mat: m.Material,
+    box: a.AABB,
+
+    pub fn initBoundingBox(self: *Sphere) void {
+        // check if stationary
+        const dir = self.center.direction;
+        const r_vec = v.vec3{ .x = self.radius, .y = self.radius, .z = self.radius };
+        self.box = a.AABB{};
+
+        if (dir.x == 0 and dir.y == 0 and dir.z == 0) {
+            self.box.initPoints(v.subtract(&self.center.origin, &r_vec), v.add(&self.center.origin, &r_vec));
+        } else {
+            const point0 = r.at(&self.center, 0);
+            const point1 = r.at(&self.center, 1);
+            const box1 = a.AABB{};
+            box1.initPoints(&v.subtract(&point0, &r_vec), &v.add(&point0, &r_vec));
+            const box2 = a.AABB{};
+            box2.initPoints(&v.subtract(&point1, &r_vec), &v.add(&point1, &r_vec));
+            self.box.initBoxes(&box1, &box2);
+        }
+    }
+
+    pub fn boundingBox(self: Sphere) a.AABB {
+        return self.box;
+    }
 
     pub fn hit(self: Sphere, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         const current_center = r.at(&self.center, ray.time);
         const oc = v.subtract(&current_center, &ray.origin);
-        const a = v.lengthSquared(&ray.direction);
+        const lsq = v.lengthSquared(&ray.direction);
         const h = v.dotProduct(&ray.direction, &oc);
         const c_var = v.lengthSquared(&oc) - (self.radius * self.radius);
-        const discriminant = (h * h) - (a * c_var);
+        const discriminant = (h * h) - (lsq * c_var);
 
         if (discriminant < 0) {
             return false;
@@ -40,9 +65,9 @@ pub const Sphere = struct {
         const sqrtd = std.math.sqrt(discriminant);
         // find nearest root that lies in acceptable range
 
-        var root = (h - sqrtd) / a;
+        var root = (h - sqrtd) / lsq;
         if (!ray_t.surrounds(root)) {
-            root = (h + sqrtd) / a;
+            root = (h + sqrtd) / lsq;
             if (!ray_t.surrounds(root)) {
                 return false;
             }
@@ -60,6 +85,7 @@ pub const Sphere = struct {
 
 pub const HittableList = struct {
     objects: std.ArrayList(Hittable) = undefined,
+    box: a.AABB = a.AABB{},
 
     pub fn init(self: *HittableList, allocator: std.mem.Allocator) void {
         self.objects = std.ArrayList(Hittable).init(allocator);
@@ -78,10 +104,15 @@ pub const HittableList = struct {
 
     pub fn push(self: *HittableList, object: Hittable) !void {
         try self.objects.append(object);
+        self.box.initBoxes(&self.box, &object.boundingBox());
     }
 
     pub fn getLen(self: HittableList) usize {
         return self.objects.len;
+    }
+
+    pub fn boundingBox(self: HittableList) a.AABB {
+        return self.box;
     }
 
     pub fn hit(self: HittableList, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
@@ -115,6 +146,12 @@ pub const Hittable = union(enum) {
     pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {
             inline else => |case| return case.hit(ray, ray_t, record),
+        }
+    }
+
+    pub fn boundingBox(self: Hittable) a.AABB {
+        switch (self) {
+            inline else => |case| return case.boundingBox(),
         }
     }
 };

@@ -32,6 +32,12 @@ pub const Interval = struct {
     }
 };
 
+pub fn fromIntervals(a: *const Interval, b: *const Interval) Interval {
+    const min = if (a.min <= b.min) a.min else b.min;
+    const max = if (a.max >= b.max) a.max else b.max;
+    return Interval{ .min = min, .max = max };
+}
+
 pub const empty = Interval{
     .min = infinity,
     .max = -infinity,

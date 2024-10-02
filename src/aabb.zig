@@ -19,6 +19,12 @@ pub const AABB = struct {
         self.z = if (a.z <= b.z) i.Interval{ .min = a.z, .max = b.z } else i.Inteval{ .min = b.z, .max = a.z };
     }
 
+    pub fn initBoxes(self: *AABB, box1: *const AABB, box2: *const AABB) void {
+        self.x = i.fromIntervals(&box1.x, &box2.x);
+        self.y = i.fromIntervals(&box1.y, &box2.y);
+        self.z = i.fromIntervals(&box1.z, &box2.z);
+    }
+
     pub fn axisInterval(self: AABB, n: usize) i.Interval {
         if (n == 1) return self.y;
         if (n == 2) return self.z;
