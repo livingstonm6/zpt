@@ -31,6 +31,13 @@ pub const AABB = struct {
         return self.x;
     }
 
+    pub fn longestAxis(self: AABB) usize {
+        if (self.x.size() > self.y.size()) {
+            return if (self.x.size() > self.z.size()) 0 else 2;
+        }
+        return if (self.y.size() > self.z.size()) 1 else 2;
+    }
+
     pub fn hit(self: AABB, ray: *const r.ray, ray_t: i.Interval) bool {
         var int = ray_t;
         for (0..3) |axis| {
@@ -55,6 +62,9 @@ pub const AABB = struct {
         return true;
     }
 };
+
+pub const empty = AABB{ .x = i.empty, .y = i.empty, .z = i.empty };
+
 test "intersection 1" {
     const std = @import("std");
 

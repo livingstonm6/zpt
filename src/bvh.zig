@@ -23,7 +23,7 @@ fn boxCompareZ(_: void, h1: h.Hittable, h2: h.Hittable) bool {
 pub const BVHNode = struct {
     left: *h.Hittable = undefined,
     right: *h.Hittable = undefined,
-    box: a.AABB = undefined,
+    box: a.AABB = a.empty,
 
     pub fn initBoundingBox(self: *const BVHNode) void {
         _ = self;
@@ -36,6 +36,10 @@ pub const BVHNode = struct {
     fn init(self: *BVHNode, list: *std.ArrayList(h.Hittable), start: usize, end: usize, allocator: std.mem.Allocator) !void {
         const object_span = end - start;
 
+        for (start..end) |index| {
+            self.box.initBoxes(&self.boundingBox(), &list.items[index].boundingBox());
+        }
+
         if (object_span == 1) {
             self.left = &list.items[start];
             self.right = &list.items[start];
@@ -43,7 +47,8 @@ pub const BVHNode = struct {
             self.left = &list.items[start];
             self.right = &list.items[start + 1];
         } else {
-            const axis = try util.randomU8Range(0, 2);
+            //const axis = try util.randomU8Range(0, 2);
+            const axis = self.box.longestAxis();
             switch (axis) {
                 0 => std.sort.block(h.Hittable, list.items[start..end], {}, boxCompareX),
                 1 => std.sort.block(h.Hittable, list.items[start..end], {}, boxCompareY),
@@ -58,9 +63,6 @@ pub const BVHNode = struct {
             self.right.* = h.Hittable{ .bvh = BVHNode{} };
             try self.right.bvh.init(list, midpoint, end, allocator);
         }
-
-        self.box = a.AABB{};
-        self.box.initBoxes(&self.left.boundingBox(), &self.right.boundingBox());
     }
 
     pub fn hit(self: BVHNode, ray: *const r.ray, ray_t: i.Interval, record: *h.HitRecord) bool {
