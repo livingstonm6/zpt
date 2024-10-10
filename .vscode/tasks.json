@@ -6,8 +6,8 @@
         {
             "label": "build",
             "type": "shell",
-            //"command": "zig build",
-            "command": "zig build -Doptimize=ReleaseSafe",
+            "command": "zig build",
+            //"command": "zig build -Doptimize=ReleaseSafe",
             "group": "build",
             "problemMatcher": [
                 "$gcc"

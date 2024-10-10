@@ -47,3 +47,18 @@ pub const universe = Interval{
     .min = -infinity,
     .max = infinity,
 };
+
+test "fromIntervals" {
+    const min1: f64 = -1.1101493574687844e1;
+    const min2: f64 = -1.112247435406511e1;
+    const max1: f64 = -1.0701493574687845e1;
+    const max2: f64 = -1.0722474354065112e1;
+
+    const int1 = Interval{ .min = min1, .max = max1 };
+    const int2 = Interval{ .min = min2, .max = max2 };
+
+    const int3 = fromIntervals(&int1, &int2);
+
+    try std.testing.expectEqual(min2, int3.min);
+    try std.testing.expectEqual(max1, int3.max);
+}

@@ -4,6 +4,7 @@ const r = @import("ray.zig");
 const i = @import("interval.zig");
 const m = @import("material.zig");
 const a = @import("aabb.zig");
+const b = @import("bvh.zig");
 
 pub const HitRecord = struct {
     point: v.point3,
@@ -25,22 +26,21 @@ pub const Sphere = struct {
     center: r.ray,
     radius: f64,
     mat: m.Material,
-    box: a.AABB,
+    box: a.AABB = a.AABB{},
 
     pub fn initBoundingBox(self: *Sphere) void {
         // check if stationary
         const dir = self.center.direction;
         const r_vec = v.vec3{ .x = self.radius, .y = self.radius, .z = self.radius };
-        self.box = a.AABB{};
 
         if (dir.x == 0 and dir.y == 0 and dir.z == 0) {
-            self.box.initPoints(v.subtract(&self.center.origin, &r_vec), v.add(&self.center.origin, &r_vec));
+            self.box.initPoints(&v.subtract(&self.center.origin, &r_vec), &v.add(&self.center.origin, &r_vec));
         } else {
             const point0 = r.at(&self.center, 0);
             const point1 = r.at(&self.center, 1);
-            const box1 = a.AABB{};
+            var box1 = a.AABB{};
             box1.initPoints(&v.subtract(&point0, &r_vec), &v.add(&point0, &r_vec));
-            const box2 = a.AABB{};
+            var box2 = a.AABB{};
             box2.initPoints(&v.subtract(&point1, &r_vec), &v.add(&point1, &r_vec));
             self.box.initBoxes(&box1, &box2);
         }
@@ -87,6 +87,10 @@ pub const HittableList = struct {
     objects: std.ArrayList(Hittable) = undefined,
     box: a.AABB = a.AABB{},
 
+    pub fn initBoundingBox(self: *const HittableList) void {
+        _ = self;
+    }
+
     pub fn init(self: *HittableList, allocator: std.mem.Allocator) void {
         self.objects = std.ArrayList(Hittable).init(allocator);
     }
@@ -102,13 +106,25 @@ pub const HittableList = struct {
         }
     }
 
-    pub fn push(self: *HittableList, object: Hittable) !void {
+    pub fn pushSphere(self: *HittableList, sphere: Sphere) !void {
+        var object = Hittable{ .sphere = sphere };
+        object.sphere.initBoundingBox();
         try self.objects.append(object);
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
 
+    pub fn push(self: *HittableList, object: *Hittable) !void {
+        try self.objects.append(object);
+        switch (object.*) {
+            .sphere => object.sphere.initBoundingBox(),
+            else => {},
+        }
+        //object.initBoundingBox();
+        self.box.initBoxes(&self.box, &object.boundingBox());
+    }
+
     pub fn getLen(self: HittableList) usize {
-        return self.objects.len;
+        return self.objects.items.len;
     }
 
     pub fn boundingBox(self: HittableList) a.AABB {
@@ -128,12 +144,15 @@ pub const HittableList = struct {
         var closest_so_far = ray_t.max;
 
         for (self.objects.items) |object| {
-            if (object.hit(ray, i.Interval{ .min = ray_t.min, .max = closest_so_far }, p_record)) {
+            const interval = i.Interval{ .min = ray_t.min, .max = closest_so_far };
+            if (object.hit(ray, interval, p_record)) {
                 hit_anything = true;
+                //std.log.debug("Hit something", .{});
                 closest_so_far = temp_record.t;
                 record.* = temp_record;
             }
         }
+
         return hit_anything;
     }
 };
@@ -142,6 +161,7 @@ pub const HittableList = struct {
 pub const Hittable = union(enum) {
     sphere: Sphere,
     hittableList: HittableList,
+    bvh: b.BVHNode,
 
     pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {

@@ -87,7 +87,10 @@ pub const Camera = struct {
         };
         const p_rec: *h.HitRecord = &record;
 
-        if (world.hit(ray, interval.Interval{ .min = 0.001, .max = std.math.inf(f64) }, p_rec)) {
+        const int = interval.Interval{ .min = 0.001, .max = std.math.inf(f64) };
+
+        if (world.hit(ray, int, p_rec)) {
+            //std.log.debug("Hit!", .{});
             var scattered = r.ray{};
             var attenuation = c.color{};
             const p_scat: *r.ray = &scattered;

@@ -6,6 +6,7 @@ const cam = @import("camera.zig");
 const m = @import("material.zig");
 const util = @import("util.zig");
 const r = @import("ray.zig");
+const bv = @import("bvh.zig");
 
 pub fn main() !void {
     // Init hittable list
@@ -20,7 +21,7 @@ pub fn main() !void {
     const mat_ground = m.Material{ .lambertian = m.Lambertian{
         .albedo = c.color{ .x = 0.5, .y = 0.5, .z = 0.5 },
     } };
-    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = -1000, .z = 0 } }, .radius = 1000, .mat = mat_ground } });
+    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = -1000, .z = 0 } }, .radius = 1000, .mat = mat_ground });
     var a: i8 = -11;
     while (a < 11) : (a += 1) {
         var b: i8 = -11;
@@ -42,19 +43,19 @@ pub fn main() !void {
                     } };
                     const center2 = v.add(&center, &v.vec3{ .x = 0, .y = try util.randomF64Range(0, 0.5), .z = 0 });
 
-                    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = center, .direction = v.subtract(&center2, &center) }, .radius = 0.2, .mat = material } });
+                    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = center, .direction = v.subtract(&center2, &center) }, .radius = 0.2, .mat = material });
                 } else if (choose_mat < 0.95) {
                     // metal
                     const albedo = try v.randomRange(0.5, 1);
                     const fuzz = try util.randomF64Range(0, 0.5);
                     material = m.Material{ .metal = m.Metal{ .albedo = albedo, .fuzz = fuzz } };
-                    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = center }, .radius = 0.2, .mat = material } });
+                    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = center }, .radius = 0.2, .mat = material });
                 } else {
                     // glass
                     material = m.Material{ .dielectric = m.Dielectric{
                         .refraction_index = 1.5,
                     } };
-                    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = center }, .radius = 0.2, .mat = material } });
+                    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = center }, .radius = 0.2, .mat = material });
                 }
             }
         }
@@ -74,9 +75,9 @@ pub fn main() !void {
     } };
 
     // Set up scene
-    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = 1, .z = 0 } }, .radius = 1.0, .mat = mat1 } });
-    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = -4, .y = 1, .z = 0 } }, .radius = 1.0, .mat = mat2 } });
-    try world.hittableList.push(h.Hittable{ .sphere = h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 4, .y = 1, .z = 0 } }, .radius = 1.0, .mat = mat3 } });
+    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = 1, .z = 0 } }, .radius = 1.0, .mat = mat1 });
+    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = -4, .y = 1, .z = 0 } }, .radius = 1.0, .mat = mat2 });
+    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 4, .y = 1, .z = 0 } }, .radius = 1.0, .mat = mat3 });
 
     // Set up camera and render
     var camera = cam.Camera{};
@@ -92,5 +93,12 @@ pub fn main() !void {
     camera.dof_angle = 0.6;
     camera.focus_dist = 10.0;
 
-    try camera.render(&world);
+    // build BVH
+
+    var bvh = h.Hittable{ .bvh = bv.BVHNode{} };
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    try bvh.bvh.initTree(&world.hittableList, arena.allocator());
+    try camera.render(&bvh);
 }
