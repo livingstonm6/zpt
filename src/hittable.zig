@@ -12,6 +12,9 @@ pub const HitRecord = struct {
     mat: m.Material,
     t: f64,
     front_face: bool,
+    // texture coords
+    u: f64,
+    v: f64,
 
     pub fn setFaceNormal(self: *HitRecord, ray: *const r.ray, outward_normal: *const v.vec3) void {
         // Set hit record with normal vector
@@ -132,13 +135,7 @@ pub const HittableList = struct {
     }
 
     pub fn hit(self: HittableList, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
-        var temp_record = HitRecord{
-            .point = v.point3{},
-            .normal = v.vec3{},
-            .mat = m.Material{ .none = m.None{} },
-            .t = 0,
-            .front_face = false,
-        };
+        var temp_record = HitRecord{ .point = v.point3{}, .normal = v.vec3{}, .mat = m.Material{ .none = m.None{} }, .t = 0, .front_face = false, .u = 0, .v = 0 };
         const p_record: *HitRecord = &temp_record;
         var hit_anything = false;
         var closest_so_far = ray_t.max;
@@ -147,7 +144,6 @@ pub const HittableList = struct {
             const interval = i.Interval{ .min = ray_t.min, .max = closest_so_far };
             if (object.hit(ray, interval, p_record)) {
                 hit_anything = true;
-                //std.log.debug("Hit something", .{});
                 closest_so_far = temp_record.t;
                 record.* = temp_record;
             }

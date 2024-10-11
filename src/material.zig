@@ -4,9 +4,18 @@ const h = @import("hittable.zig");
 const c = @import("color.zig");
 const v = @import("vec3.zig");
 const util = @import("util.zig");
+const t = @import("texture.zig");
 
 pub const Lambertian = struct {
-    albedo: c.color,
+    texture: t.Texture = undefined,
+
+    pub fn initAlbedo(self: *Lambertian, albedo: c.color) void {
+        self.texture = t.Texture{ .solidColor = t.SolidColor{ .albedo = albedo } };
+    }
+
+    pub fn initTexture(self: *Lambertian, texture: t.Texture) void {
+        self.texture = texture;
+    }
 
     pub fn scatter(self: Lambertian, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
         var scattered_direction = v.add(&record.normal, &try v.randomUnit());
@@ -16,7 +25,7 @@ pub const Lambertian = struct {
         }
 
         scattered.* = r.ray{ .origin = record.point, .direction = scattered_direction, .time = ray_in.time };
-        attenuation.* = self.albedo;
+        attenuation.* = self.texture.value(record.u, record.v, &record.point);
         return true;
     }
 };

@@ -7,6 +7,7 @@ const m = @import("material.zig");
 const util = @import("util.zig");
 const r = @import("ray.zig");
 const bv = @import("bvh.zig");
+const t = @import("texture.zig");
 
 pub fn main() !void {
     // Init hittable list
@@ -17,10 +18,22 @@ pub fn main() !void {
     world.hittableList.init(gpa.allocator());
     defer world.hittableList.deinit();
 
-    // Define materials
-    const mat_ground = m.Material{ .lambertian = m.Lambertian{
-        .albedo = c.color{ .x = 0.5, .y = 0.5, .z = 0.5 },
-    } };
+    var checker = t.Texture{ .checkerTexture = t.CheckerTexture{} };
+
+    const tex1 = try gpa.allocator().create(t.Texture);
+    tex1.* = t.Texture{ .solidColor = t.SolidColor{ .albedo = c.color{ .x = 0.2, .y = 0.3, .z = 0.1 } } };
+    defer gpa.allocator().destroy(tex1);
+
+    const tex2 = try gpa.allocator().create(t.Texture);
+    tex2.* = t.Texture{ .solidColor = t.SolidColor{ .albedo = c.color{ .x = 0.9, .y = 0.9, .z = 0.9 } } };
+    defer gpa.allocator().destroy(tex2);
+
+    checker.checkerTexture.init(0.32, tex1, tex2);
+
+    var mat_ground = m.Material{ .lambertian = m.Lambertian{} };
+
+    mat_ground.lambertian.initTexture(checker);
+
     try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = -1000, .z = 0 } }, .radius = 1000, .mat = mat_ground });
     var a: i8 = -11;
     while (a < 11) : (a += 1) {
@@ -38,9 +51,10 @@ pub fn main() !void {
                 if (choose_mat < 0.8) {
                     // diffuse
                     const albedo = v.vecMultiply(&try v.random(), &try v.random());
-                    material = m.Material{ .lambertian = m.Lambertian{
-                        .albedo = albedo,
-                    } };
+                    var lamb = m.Lambertian{};
+                    lamb.initAlbedo(albedo);
+
+                    material = m.Material{ .lambertian = lamb };
                     const center2 = v.add(&center, &v.vec3{ .x = 0, .y = try util.randomF64Range(0, 0.5), .z = 0 });
 
                     try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{ .origin = center, .direction = v.subtract(&center2, &center) }, .radius = 0.2, .mat = material });
@@ -64,10 +78,9 @@ pub fn main() !void {
     const mat1 = m.Material{ .dielectric = m.Dielectric{
         .refraction_index = 1.50,
     } };
-
-    const mat2 = m.Material{ .lambertian = m.Lambertian{
-        .albedo = c.color{ .x = 0.4, .y = 0.2, .z = 0.1 },
-    } };
+    var lamb2 = m.Lambertian{};
+    lamb2.initAlbedo(c.color{ .x = 0.4, .y = 0.2, .z = 0.1 });
+    const mat2 = m.Material{ .lambertian = lamb2 };
 
     const mat3 = m.Material{ .metal = m.Metal{
         .albedo = c.color{ .x = 0.7, .y = 0.6, .z = 0.5 },

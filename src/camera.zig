@@ -78,13 +78,7 @@ pub const Camera = struct {
             return c.color{ .x = 0, .y = 0, .z = 0 };
         }
 
-        var record = h.HitRecord{
-            .point = vec.point3{},
-            .normal = vec.vec3{},
-            .mat = m.Material{ .none = m.None{} },
-            .t = 0,
-            .front_face = false,
-        };
+        var record = h.HitRecord{ .point = vec.point3{}, .normal = vec.vec3{}, .mat = m.Material{ .none = m.None{} }, .t = 0, .front_face = false, .u = 0, .v = 0 };
         const p_rec: *h.HitRecord = &record;
 
         const int = interval.Interval{ .min = 0.001, .max = std.math.inf(f64) };
