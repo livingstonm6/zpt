@@ -9,7 +9,7 @@ const r = @import("ray.zig");
 const bv = @import("bvh.zig");
 const t = @import("texture.zig");
 
-pub fn main() !void {
+pub fn bouncingSpheres() !void {
     // Init hittable list
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -114,4 +114,52 @@ pub fn main() !void {
     defer arena.deinit();
     try bvh.bvh.initTree(&world.hittableList, arena.allocator());
     try camera.render(&bvh);
+}
+
+pub fn checkeredSpheres() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    var world = h.Hittable{ .hittableList = h.HittableList{} };
+    world.hittableList.init(gpa.allocator());
+    defer world.hittableList.deinit();
+
+    const evenTex = t.Texture{ .solidColor = t.SolidColor{ .albedo = c.color{ .x = 0.2, .y = 0.3, .z = 0.1 } } };
+    const oddTex = t.Texture{ .solidColor = t.SolidColor{ .albedo = c.color{ .x = 0.9, .y = 0.9, .z = 0.9 } } };
+
+    var tex = t.Texture{ .checkerTexture = t.CheckerTexture{} };
+    tex.checkerTexture.init(0.32, &evenTex, &oddTex);
+
+    var lamb = m.Lambertian{};
+    lamb.initTexture(tex);
+    const mat = m.Material{ .lambertian = lamb };
+    const sphere1 = h.Sphere{ .center = r.ray{ .origin = v.vec3{ .x = 0, .y = -10, .z = 0 }, .direction = v.vec3{ .x = 0, .y = 0, .z = 0 } }, .radius = 10, .mat = mat };
+    const sphere2 = h.Sphere{ .center = r.ray{ .origin = v.vec3{ .x = 0, .y = 10, .z = 0 }, .direction = v.vec3{ .x = 0, .y = 0, .z = 0 } }, .radius = 10, .mat = mat };
+
+    try world.hittableList.pushSphere(sphere1);
+    try world.hittableList.pushSphere(sphere2);
+
+    var camera = cam.Camera{};
+
+    camera.aspect_ratio = 16.0 / 9.0;
+    camera.image_width = 400;
+    camera.samples_per_pixel = 100;
+    camera.max_recursion_depth = 50;
+
+    camera.vertical_fov = 20;
+    camera.look_from = v.point3{ .x = 13, .y = 2, .z = 3 };
+    camera.look_at = v.point3{ .x = 0, .y = 0, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
+
+    try camera.render(&world);
+}
+
+pub fn main() !void {
+    switch (2) {
+        1 => try bouncingSpheres(),
+        2 => try checkeredSpheres(),
+        else => {},
+    }
 }
