@@ -8,6 +8,7 @@ const util = @import("util.zig");
 const r = @import("ray.zig");
 const bv = @import("bvh.zig");
 const t = @import("texture.zig");
+const image = @import("image.zig");
 
 pub fn bouncingSpheres() !void {
     // Init hittable list
@@ -156,10 +157,42 @@ pub fn checkeredSpheres() !void {
     try camera.render(&world);
 }
 
+fn earth() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var earth_texture = t.ImageTexture{ .fileName = "earthmap.jpg" };
+    try earth_texture.init(gpa.allocator());
+    defer earth_texture.deinit();
+
+    var lamb = m.Lambertian{};
+    lamb.initTexture(t.Texture{ .imageTexture = earth_texture });
+
+    const earth_surface = m.Material{ .lambertian = lamb };
+
+    var globe = h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = 0, .z = 0 }, .direction = v.vec3{ .x = 0, .y = 0, .z = 0 }, .time = 0 }, .radius = 2, .mat = earth_surface };
+    globe.initBoundingBox();
+
+    var camera = cam.Camera{};
+
+    camera.aspect_ratio = 16.0 / 9.0;
+    camera.image_width = 400;
+    camera.samples_per_pixel = 100;
+    camera.max_recursion_depth = 50;
+
+    camera.vertical_fov = 20;
+    camera.look_from = v.point3{ .x = 0, .y = 0, .z = 12 };
+    camera.look_at = v.point3{ .x = 0, .y = 0, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
+
+    try camera.render(&h.Hittable{ .sphere = globe });
+}
+
 pub fn main() !void {
-    switch (2) {
+    switch (3) {
         1 => try bouncingSpheres(),
         2 => try checkeredSpheres(),
+        3 => try earth(),
         else => {},
     }
 }
