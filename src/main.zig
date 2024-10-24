@@ -188,11 +188,52 @@ fn earth() !void {
     try camera.render(&h.Hittable{ .sphere = globe });
 }
 
+pub fn perlinSpheres() !void {
+    var world = h.Hittable{ .hittableList = h.HittableList{} };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    world.hittableList.init(allocator);
+    defer world.hittableList.deinit();
+
+    var pertext = t.Texture{ .noiseTexture = t.NoiseTexture{} };
+    try pertext.noiseTexture.init(allocator);
+    defer pertext.noiseTexture.deinit();
+
+    const mat = m.Material{ .lambertian = m.Lambertian{ .texture = pertext } };
+
+    const sphere1 = h.Sphere{ .center = r.ray{
+        .origin = v.point3{ .x = 0, .y = -1000, .z = 0 },
+    }, .radius = 1000, .mat = mat };
+    const sphere2 = h.Sphere{ .center = r.ray{ .origin = v.point3{ .x = 0, .y = 2, .z = 0 } }, .radius = 2, .mat = mat };
+
+    try world.hittableList.pushSphere(sphere1);
+    try world.hittableList.pushSphere(sphere2);
+
+    var camera = cam.Camera{};
+
+    camera.aspect_ratio = 16.0 / 9.0;
+    camera.image_width = 400;
+    camera.samples_per_pixel = 100;
+    camera.max_recursion_depth = 50;
+
+    camera.vertical_fov = 20;
+    camera.look_from = v.point3{ .x = 13, .y = 2, .z = 3 };
+    camera.look_at = v.point3{ .x = 0, .y = 0, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
+
+    try camera.render(&world);
+}
+
 pub fn main() !void {
-    switch (3) {
+    switch (4) {
         1 => try bouncingSpheres(),
         2 => try checkeredSpheres(),
         3 => try earth(),
+        4 => try perlinSpheres(),
         else => {},
     }
 }
