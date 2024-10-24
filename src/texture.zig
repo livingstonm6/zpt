@@ -3,6 +3,7 @@ const vec = @import("vec3.zig");
 const std = @import("std");
 const i = @import("image.zig");
 const int = @import("interval.zig");
+const perlin = @import("perlin.zig");
 
 pub const SolidColor = struct {
     albedo: c.color = undefined,
@@ -87,10 +88,28 @@ pub const ImageTexture = struct {
     }
 };
 
+pub const NoiseTexture = struct {
+    noise: perlin.Perlin = perlin.Perlin{},
+
+    pub fn init(self: *NoiseTexture, allocator: std.mem.Allocator) !void {
+        try self.noise.init(allocator);
+    }
+
+    pub fn deinit(self: *NoiseTexture) void {
+        self.noise.deinit();
+    }
+
+    pub fn value(self: NoiseTexture, u: f64, v: f64, p: *const vec.point3) c.color {
+        _ = .{ u, v };
+        return vec.multiply(&c.color{ .x = 1, .y = 1, .z = 1 }, self.noise.noise(p));
+    }
+};
+
 pub const Texture = union(enum) {
     solidColor: SolidColor,
     checkerTexture: CheckerTexture,
     imageTexture: ImageTexture,
+    noiseTexture: NoiseTexture,
 
     pub fn value(self: Texture, u: f64, v: f64, p: *const vec.point3) c.color {
         switch (self) {
