@@ -2,6 +2,22 @@ const std = @import("std");
 const util = @import("util.zig");
 const vec = @import("vec3.zig");
 
+fn trilinearInterpret(c: [2][2][2]f64, u: f64, v: f64, w: f64) f64 {
+    var accum: f64 = 0.0;
+    for (0..2) |i| {
+        for (0..2) |j| {
+            for (0..2) |k| {
+                const f_i = @as(f64, @floatFromInt(i));
+                const f_j = @as(f64, @floatFromInt(j));
+                const f_k = @as(f64, @floatFromInt(k));
+                accum += (f_i * u + (1 - f_i) * (1 - u)) * (f_j * v + (1 - f_j) * (1 - v)) * (f_k * w + (1 - f_k) * (1 - w)) * c[i][j][k];
+            }
+        }
+    }
+
+    return accum;
+}
+
 pub const Perlin = struct {
     point_count: usize = 256,
     rand: []f64 = undefined,
@@ -55,10 +71,43 @@ pub const Perlin = struct {
     }
 
     pub fn noise(self: Perlin, p: *const vec.point3) f64 {
-        const i = @as(usize, @intFromFloat(4 * if (p.x > 0) p.x else -p.x)) & 255;
-        const j = @as(usize, @intFromFloat(4 * if (p.y > 0) p.y else -p.y)) & 255;
-        const k = @as(usize, @intFromFloat(4 * if (p.z > 0) p.z else -p.z)) & 255;
+        // const i = @as(usize, @intFromFloat(4 * if (p.x > 0) p.x else -p.x)) & 255;
+        // const j = @as(usize, @intFromFloat(4 * if (p.y > 0) p.y else -p.y)) & 255;
+        // const k = @as(usize, @intFromFloat(4 * if (p.z > 0) p.z else -p.z)) & 255;
 
-        return self.rand[self.perm_x[i] ^ self.perm_y[j] ^ self.perm_z[k]];
+        // return self.rand[self.perm_x[i] ^ self.perm_y[j] ^ self.perm_z[k]];
+
+        const u = p.x - @floor(p.x);
+        const v = p.y - @floor(p.y);
+        const w = p.z - @floor(p.z);
+
+        const i = @as(usize, @intFromFloat(@floor(if (p.x > 0) p.x else -p.x)));
+        const j = @as(usize, @intFromFloat(@floor(if (p.y > 0) p.y else -p.y)));
+        const k = @as(usize, @intFromFloat(@floor(if (p.z > 0) p.z else -p.z)));
+
+        var c = [2][2][2]f64{
+            [2][2]f64{
+                [2]f64{ 0, 0 },
+                [2]f64{ 0, 0 },
+            },
+            [2][2]f64{
+                [2]f64{ 0, 0 },
+                [2]f64{ 0, 0 },
+            },
+        };
+
+        for (0..2) |di| {
+            for (0..2) |dj| {
+                for (0..2) |dk| {
+                    c[di][dj][dk] = self.rand[
+                        self.perm_x[(i + di) & 255] ^
+                            self.perm_y[(j + dj) & 255] ^
+                            self.perm_z[(k + dk) & 255]
+                    ];
+                }
+            }
+        }
+
+        return trilinearInterpret(c, u, v, w);
     }
 };
