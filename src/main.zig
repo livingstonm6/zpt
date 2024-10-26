@@ -197,7 +197,7 @@ pub fn perlinSpheres() !void {
     world.hittableList.init(allocator);
     defer world.hittableList.deinit();
 
-    var pertext = t.Texture{ .noiseTexture = t.NoiseTexture{} };
+    var pertext = t.Texture{ .noiseTexture = t.NoiseTexture{ .scale = 4 } };
     try pertext.noiseTexture.init(allocator);
     defer pertext.noiseTexture.deinit();
 

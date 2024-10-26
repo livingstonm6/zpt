@@ -90,6 +90,7 @@ pub const ImageTexture = struct {
 
 pub const NoiseTexture = struct {
     noise: perlin.Perlin = perlin.Perlin{},
+    scale: f64,
 
     pub fn init(self: *NoiseTexture, allocator: std.mem.Allocator) !void {
         try self.noise.init(allocator);
@@ -101,7 +102,7 @@ pub const NoiseTexture = struct {
 
     pub fn value(self: NoiseTexture, u: f64, v: f64, p: *const vec.point3) !c.color {
         _ = .{ u, v };
-        return vec.multiply(&c.color{ .x = 1, .y = 1, .z = 1 }, try self.noise.noise(p));
+        return vec.multiply(&c.color{ .x = 1, .y = 1, .z = 1 }, try self.noise.noise(&vec.multiply(p, self.scale)));
     }
 };
 
