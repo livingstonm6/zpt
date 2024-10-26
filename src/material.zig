@@ -25,7 +25,7 @@ pub const Lambertian = struct {
         }
 
         scattered.* = r.ray{ .origin = record.point, .direction = scattered_direction, .time = ray_in.time };
-        attenuation.* = self.texture.value(record.u, record.v, &record.point);
+        attenuation.* = try self.texture.value(record.u, record.v, &record.point);
         return true;
     }
 };

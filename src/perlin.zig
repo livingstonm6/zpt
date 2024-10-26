@@ -70,7 +70,7 @@ pub const Perlin = struct {
         self.allocator.free(self.perm_z);
     }
 
-    pub fn noise(self: Perlin, p: *const vec.point3) f64 {
+    pub fn noise(self: Perlin, p: *const vec.point3) !f64 {
         // const i = @as(usize, @intFromFloat(4 * if (p.x > 0) p.x else -p.x)) & 255;
         // const j = @as(usize, @intFromFloat(4 * if (p.y > 0) p.y else -p.y)) & 255;
         // const k = @as(usize, @intFromFloat(4 * if (p.z > 0) p.z else -p.z)) & 255;
@@ -81,9 +81,9 @@ pub const Perlin = struct {
         const v = p.y - @floor(p.y);
         const w = p.z - @floor(p.z);
 
-        const i = @as(usize, @intFromFloat(@floor(if (p.x > 0) p.x else -p.x)));
-        const j = @as(usize, @intFromFloat(@floor(if (p.y > 0) p.y else -p.y)));
-        const k = @as(usize, @intFromFloat(@floor(if (p.z > 0) p.z else -p.z)));
+        const i = @as(isize, @intFromFloat(@floor(p.x)));
+        const j = @as(isize, @intFromFloat(@floor(p.y)));
+        const k = @as(isize, @intFromFloat(@floor(p.z)));
 
         var c = [2][2][2]f64{
             [2][2]f64{
@@ -99,11 +99,17 @@ pub const Perlin = struct {
         for (0..2) |di| {
             for (0..2) |dj| {
                 for (0..2) |dk| {
-                    c[di][dj][dk] = self.rand[
-                        self.perm_x[(i + di) & 255] ^
-                            self.perm_y[(j + dj) & 255] ^
-                            self.perm_z[(k + dk) & 255]
-                    ];
+                    const i_di: isize = @as(isize, @intCast(di));
+                    const i_dj: isize = @as(isize, @intCast(dj));
+                    const i_dk: isize = @as(isize, @intCast(dk));
+
+                    const p_count = @as(isize, @intCast(self.point_count));
+
+                    const index: usize = @intCast((self.perm_x[@as(usize, @intCast(try std.math.mod(isize, i + i_di, p_count)))] ^
+                        self.perm_y[@as(usize, @intCast(try std.math.mod(isize, j + i_dj, p_count)))] ^
+                        self.perm_z[@as(usize, @intCast(try std.math.mod(isize, k + i_dk, p_count)))]));
+
+                    c[di][dj][dk] = self.rand[index];
                 }
             }
         }

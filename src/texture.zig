@@ -12,7 +12,7 @@ pub const SolidColor = struct {
         self.albedo = c.color{ .x = r, .y = g, .z = b };
     }
 
-    pub fn value(self: SolidColor, u: f64, v: f64, p: *const vec.point3) c.color {
+    pub fn value(self: SolidColor, u: f64, v: f64, p: *const vec.point3) !c.color {
         _ = .{ u, v, p };
         return self.albedo;
     }
@@ -39,7 +39,7 @@ pub const CheckerTexture = struct {
         );
     }
 
-    pub fn value(self: CheckerTexture, u: f64, v: f64, p: *const vec.point3) c.color {
+    pub fn value(self: CheckerTexture, u: f64, v: f64, p: *const vec.point3) !c.color {
         const xInt = @as(i32, @intFromFloat(@floor(self.inv_scale * p.x)));
         const yInt = @as(i32, @intFromFloat(@floor(self.inv_scale * p.y)));
         const zInt = @as(i32, @intFromFloat(@floor(self.inv_scale * p.z)));
@@ -63,7 +63,7 @@ pub const ImageTexture = struct {
         self.image.deinit();
     }
 
-    pub fn value(self: ImageTexture, u: f64, v: f64, p: *const vec.point3) c.color {
+    pub fn value(self: ImageTexture, u: f64, v: f64, p: *const vec.point3) !c.color {
         _ = p;
         if (self.image.loaded == false) return c.color{ .x = 0, .y = 1, .z = 1 };
 
@@ -99,9 +99,9 @@ pub const NoiseTexture = struct {
         self.noise.deinit();
     }
 
-    pub fn value(self: NoiseTexture, u: f64, v: f64, p: *const vec.point3) c.color {
+    pub fn value(self: NoiseTexture, u: f64, v: f64, p: *const vec.point3) !c.color {
         _ = .{ u, v };
-        return vec.multiply(&c.color{ .x = 1, .y = 1, .z = 1 }, self.noise.noise(p));
+        return vec.multiply(&c.color{ .x = 1, .y = 1, .z = 1 }, try self.noise.noise(p));
     }
 };
 
@@ -111,7 +111,7 @@ pub const Texture = union(enum) {
     imageTexture: ImageTexture,
     noiseTexture: NoiseTexture,
 
-    pub fn value(self: Texture, u: f64, v: f64, p: *const vec.point3) c.color {
+    pub fn value(self: Texture, u: f64, v: f64, p: *const vec.point3) !c.color {
         switch (self) {
             inline else => |case| return case.value(u, v, p),
         }
