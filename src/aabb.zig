@@ -7,16 +7,25 @@ pub const AABB = struct {
     y: i.Interval = i.empty,
     z: i.Interval = i.empty,
 
+    fn padToMinimums(self: *AABB) void {
+        const delta = 0.0001;
+        if (self.x.size() < delta) self.x = self.x.expand(delta);
+        if (self.y.size() < delta) self.y = self.y.expand(delta);
+        if (self.z.size() < delta) self.z = self.z.expand(delta);
+    }
+
     pub fn initIntervals(self: *AABB, int1: i.Interval, int2: i.Interval, int3: i.Interval) void {
         self.x = int1;
         self.y = int2;
         self.z = int3;
+        self.padToMinimums();
     }
 
     pub fn initPoints(self: *AABB, a: *const v.point3, b: *const v.point3) void {
         self.x = if (a.x <= b.x) i.Interval{ .min = a.x, .max = b.x } else i.Interval{ .min = b.x, .max = a.x };
         self.y = if (a.y <= b.y) i.Interval{ .min = a.y, .max = b.y } else i.Interval{ .min = b.y, .max = a.y };
         self.z = if (a.z <= b.z) i.Interval{ .min = a.z, .max = b.z } else i.Interval{ .min = b.z, .max = a.z };
+        self.padToMinimums();
     }
 
     pub fn initBoxes(self: *AABB, box1: *const AABB, box2: *const AABB) void {

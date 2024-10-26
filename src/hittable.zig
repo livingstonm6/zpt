@@ -5,6 +5,7 @@ const i = @import("interval.zig");
 const m = @import("material.zig");
 const a = @import("aabb.zig");
 const b = @import("bvh.zig");
+const q = @import("quad.zig");
 
 pub const HitRecord = struct {
     point: vec.point3,
@@ -127,6 +128,13 @@ pub const HittableList = struct {
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
 
+    pub fn pushQuad(self: *HittableList, quad: q.Quad) !void {
+        var object = Hittable{ .quad = quad };
+        object.quad.init();
+        try self.objects.append(object);
+        self.box.initBoxes(&self.box, &object.boundingBox());
+    }
+
     pub fn push(self: *HittableList, object: *Hittable) !void {
         try self.objects.append(object);
         switch (object.*) {
@@ -169,6 +177,7 @@ pub const Hittable = union(enum) {
     sphere: Sphere,
     hittableList: HittableList,
     bvh: b.BVHNode,
+    quad: q.Quad,
 
     pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {
