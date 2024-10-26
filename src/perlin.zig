@@ -71,15 +71,14 @@ pub const Perlin = struct {
     }
 
     pub fn noise(self: Perlin, p: *const vec.point3) !f64 {
-        // const i = @as(usize, @intFromFloat(4 * if (p.x > 0) p.x else -p.x)) & 255;
-        // const j = @as(usize, @intFromFloat(4 * if (p.y > 0) p.y else -p.y)) & 255;
-        // const k = @as(usize, @intFromFloat(4 * if (p.z > 0) p.z else -p.z)) & 255;
+        var u = p.x - @floor(p.x);
+        var v = p.y - @floor(p.y);
+        var w = p.z - @floor(p.z);
 
-        // return self.rand[self.perm_x[i] ^ self.perm_y[j] ^ self.perm_z[k]];
-
-        const u = p.x - @floor(p.x);
-        const v = p.y - @floor(p.y);
-        const w = p.z - @floor(p.z);
+        // Hermitian smoothing
+        u = u * u * (3 - 2 * u);
+        v = v * v * (3 - 2 * v);
+        w = w * w * (3 - 2 * w);
 
         const i = @as(isize, @intFromFloat(@floor(p.x)));
         const j = @as(isize, @intFromFloat(@floor(p.y)));
