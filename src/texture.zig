@@ -102,7 +102,7 @@ pub const NoiseTexture = struct {
 
     pub fn value(self: NoiseTexture, u: f64, v: f64, p: *const vec.point3) !c.color {
         _ = .{ u, v };
-        return vec.multiply(&c.color{ .x = 0.5, .y = 0.5, .z = 0.5 }, 1.0 + try self.noise.noise(&vec.multiply(p, self.scale)));
+        return vec.multiply(&c.color{ .x = 0.5, .y = 0.5, .z = 0.5 }, 1 + std.math.sin(self.scale * p.z + 10 * try self.noise.turb(p, 7)));
     }
 };
 

@@ -124,4 +124,19 @@ pub const Perlin = struct {
 
         return perlinInterpret(c, u, v, w);
     }
+
+    pub fn turb(self: Perlin, p: *const vec.point3, depth: usize) !f64 {
+        var accum: f64 = 0.0;
+        var temp_p = p.*;
+        var weight: f64 = 1.0;
+
+        for (0..depth) |i| {
+            _ = i;
+            accum += weight * try self.noise(&temp_p);
+            weight *= 0.5;
+            temp_p = vec.multiply(&temp_p, 2);
+        }
+
+        return @abs(accum);
+    }
 };
