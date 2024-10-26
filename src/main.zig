@@ -9,6 +9,7 @@ const r = @import("ray.zig");
 const bv = @import("bvh.zig");
 const t = @import("texture.zig");
 const image = @import("image.zig");
+const q = @import("quad.zig");
 
 pub fn bouncingSpheres() !void {
     // Init hittable list
@@ -228,12 +229,83 @@ pub fn perlinSpheres() !void {
     try camera.render(&world);
 }
 
+fn quads() !void {
+    // Mats
+    var red_lamb = m.Lambertian{};
+    red_lamb.initAlbedo(c.color{ .x = 1.0, .y = 0.2, .z = 0.2 });
+    const left_red = m.Material{ .lambertian = red_lamb };
+
+    var green_lamb = m.Lambertian{};
+    green_lamb.initAlbedo(c.color{ .x = 0.2, .y = 1.0, .z = 0.2 });
+    const back_green = m.Material{ .lambertian = green_lamb };
+
+    var blue_lamb = m.Lambertian{};
+    blue_lamb.initAlbedo(c.color{ .x = 0.2, .y = 0.2, .z = 1.0 });
+    const right_blue = m.Material{ .lambertian = blue_lamb };
+
+    var orange_lamb = m.Lambertian{};
+    orange_lamb.initAlbedo(c.color{ .x = 1.0, .y = 0.5, .z = 0.0 });
+    const upper_orange = m.Material{ .lambertian = orange_lamb };
+
+    var teal_lamb = m.Lambertian{};
+    teal_lamb.initAlbedo(c.color{ .x = 0.2, .y = 0.8, .z = 0.8 });
+    const lower_teal = m.Material{ .lambertian = teal_lamb };
+
+    // HittableList
+
+    var world = h.Hittable{ .hittableList = h.HittableList{} };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    world.hittableList.init(allocator);
+    defer world.hittableList.deinit();
+
+    const left = q.Quad{
+        .q = v.point3{ .x = -3, .y = -2, .z = 5 },
+        .u = v.vec3{ .x = 0, .y = 0, .z = -4 },
+        .v = v.vec3{ .x = 0, .y = 4, .z = 0 },
+        .mat = left_red,
+    };
+
+    const back = q.Quad{ .q = v.point3{ .x = -2, .y = -2, .z = 0 }, .u = v.vec3{ .x = 4, .y = 0, .z = 0 }, .v = v.vec3{ .x = 0, .y = 4, .z = 0 }, .mat = back_green };
+
+    const right = q.Quad{ .q = v.point3{ .x = 3, .y = -2, .z = 1 }, .u = v.vec3{ .x = 0, .y = 0, .z = 4 }, .v = v.vec3{ .x = 0, .y = 4, .z = 0 }, .mat = right_blue };
+
+    const upper = q.Quad{ .q = v.point3{ .x = -2, .y = 3, .z = 1 }, .u = v.vec3{ .x = 4, .y = 0, .z = 0 }, .v = v.vec3{ .x = 0, .y = 0, .z = 4 }, .mat = upper_orange };
+
+    const lower = q.Quad{ .q = v.point3{ .x = -2, .y = -3, .z = 5 }, .u = v.vec3{ .x = 4, .y = 0, .z = 0 }, .v = v.vec3{ .x = 0, .y = 0, .z = -4 }, .mat = lower_teal };
+
+    try world.hittableList.pushQuad(left);
+    try world.hittableList.pushQuad(back);
+    try world.hittableList.pushQuad(right);
+    try world.hittableList.pushQuad(upper);
+    try world.hittableList.pushQuad(lower);
+
+    var camera = cam.Camera{};
+
+    camera.aspect_ratio = 1.0;
+    camera.image_width = 400;
+    camera.samples_per_pixel = 100;
+    camera.max_recursion_depth = 50;
+
+    camera.vertical_fov = 80;
+    camera.look_from = v.point3{ .x = 0, .y = 0, .z = 9 };
+    camera.look_at = v.point3{ .x = 0, .y = 0, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
+
+    try camera.render(&world);
+}
+
 pub fn main() !void {
-    switch (4) {
+    switch (5) {
         1 => try bouncingSpheres(),
         2 => try checkeredSpheres(),
         3 => try earth(),
         4 => try perlinSpheres(),
+        5 => try quads(),
         else => {},
     }
 }
