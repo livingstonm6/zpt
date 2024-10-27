@@ -369,14 +369,102 @@ fn simpleLight() !void {
     try camera.render(&world);
 }
 
+fn cornellBox() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    var world = h.Hittable{ .hittableList = h.HittableList{} };
+    world.hittableList.init(allocator);
+    defer world.hittableList.deinit();
+
+    var red = m.Material{ .lambertian = m.Lambertian{} };
+    red.lambertian.initAlbedo(c.color{ .x = 0.65, .y = 0.05, .z = 0.05 });
+
+    var white = m.Material{ .lambertian = m.Lambertian{} };
+    white.lambertian.initAlbedo(c.color{ .x = 0.73, .y = 0.73, .z = 0.73 });
+
+    var green = m.Material{ .lambertian = m.Lambertian{} };
+    green.lambertian.initAlbedo(c.color{ .x = 0.12, .y = 0.45, .z = 0.15 });
+
+    var light = m.Material{ .diffuseLight = m.DiffuseLight{} };
+    light.diffuseLight.initColor(c.color{ .x = 15, .y = 15, .z = 15 });
+
+    try world.hittableList.pushQuad(q.Quad{
+        .q = v.point3{ .x = 555, .y = 0, .z = 0 },
+        .u = v.vec3{ .x = 0, .y = 555, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 0, .z = 555 },
+        .mat = green,
+    });
+
+    try world.hittableList.pushQuad(q.Quad{
+        .q = v.point3{ .x = 0, .y = 0, .z = 0 },
+        .u = v.vec3{ .x = 0, .y = 555, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 0, .z = 555 },
+        .mat = red,
+    });
+
+    try world.hittableList.pushQuad(q.Quad{
+        .q = v.point3{ .x = 343, .y = 555, .z = 332 },
+        .u = v.vec3{ .x = -130, .y = 0, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 0, .z = -105 },
+        .mat = light,
+    });
+
+    try world.hittableList.pushQuad(q.Quad{
+        .q = v.point3{ .x = 0, .y = 0, .z = 0 },
+        .u = v.vec3{ .x = 555, .y = 0, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 0, .z = 555 },
+        .mat = white,
+    });
+
+    try world.hittableList.pushQuad(q.Quad{
+        .q = v.point3{ .x = 555, .y = 555, .z = 555 },
+        .u = v.vec3{ .x = -555, .y = 0, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 0, .z = -555 },
+        .mat = white,
+    });
+
+    try world.hittableList.pushQuad(q.Quad{
+        .q = v.point3{ .x = 0, .y = 0, .z = 555 },
+        .u = v.vec3{ .x = 555, .y = 0, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 555, .z = 0 },
+        .mat = white,
+    });
+
+    var camera = cam.Camera{};
+
+    camera.aspect_ratio = 1.0;
+    camera.image_width = 600;
+    camera.samples_per_pixel = 200;
+    camera.max_recursion_depth = 50;
+    camera.background = c.color{ .x = 0, .y = 0, .z = 0 };
+
+    camera.vertical_fov = 40;
+    camera.look_from = v.point3{ .x = 278, .y = 278, .z = -800 };
+    camera.look_at = v.point3{ .x = 278, .y = 278, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
+
+    // build BVH
+
+    var bvh = h.Hittable{ .bvh = bv.BVHNode{} };
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    try bvh.bvh.initTree(&world.hittableList, arena.allocator());
+    try camera.render(&bvh);
+}
+
 pub fn main() !void {
-    switch (6) {
+    switch (7) {
         1 => try bouncingSpheres(),
         2 => try checkeredSpheres(),
         3 => try earth(),
         4 => try perlinSpheres(),
         5 => try quads(),
         6 => try simpleLight(),
+        7 => try cornellBox(),
         else => {},
     }
 }
