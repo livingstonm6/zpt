@@ -108,6 +108,8 @@ pub fn bouncingSpheres() !void {
     camera.dof_angle = 0.6;
     camera.focus_dist = 10.0;
 
+    camera.background = c.color{ .x = 0.7, .y = 0.8, .z = 1.0 };
+
     // build BVH
 
     var bvh = h.Hittable{ .bvh = bv.BVHNode{} };
@@ -155,6 +157,8 @@ pub fn checkeredSpheres() !void {
 
     camera.dof_angle = 0;
 
+    camera.background = c.color{ .x = 0.7, .y = 0.8, .z = 1.0 };
+
     try camera.render(&world);
 }
 
@@ -185,6 +189,7 @@ fn earth() !void {
     camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
 
     camera.dof_angle = 0;
+    camera.background = c.color{ .x = 0.7, .y = 0.8, .z = 1.0 };
 
     try camera.render(&h.Hittable{ .sphere = globe });
 }
@@ -225,6 +230,7 @@ pub fn perlinSpheres() !void {
     camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
 
     camera.dof_angle = 0;
+    camera.background = c.color{ .x = 0.7, .y = 0.8, .z = 1.0 };
 
     try camera.render(&world);
 }
@@ -295,17 +301,82 @@ fn quads() !void {
     camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
 
     camera.dof_angle = 0;
+    camera.background = c.color{ .x = 0.7, .y = 0.8, .z = 1.0 };
+
+    try camera.render(&world);
+}
+
+fn simpleLight() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    var world = h.Hittable{ .hittableList = h.HittableList{} };
+    world.hittableList.init(allocator);
+    defer world.hittableList.deinit();
+
+    var pertext = t.Texture{ .noiseTexture = t.NoiseTexture{ .scale = 4 } };
+    try pertext.noiseTexture.init(allocator);
+
+    const mat = m.Material{ .lambertian = m.Lambertian{ .texture = pertext } };
+
+    const sphere1 = h.Sphere{
+        .center = r.ray{ .origin = v.point3{ .x = 0, .y = -1000, .z = 0 } },
+        .radius = 1000,
+        .mat = mat,
+    };
+
+    const sphere2 = h.Sphere{
+        .center = r.ray{ .origin = v.point3{ .x = 0, .y = 2, .z = 0 } },
+        .radius = 2,
+        .mat = mat,
+    };
+
+    try world.hittableList.pushSphere(sphere1);
+    try world.hittableList.pushSphere(sphere2);
+
+    var diff_light = m.Material{ .diffuseLight = m.DiffuseLight{} };
+    diff_light.diffuseLight.initColor(c.color{ .x = 4, .y = 4, .z = 4 });
+    const quad = q.Quad{
+        .q = v.point3{ .x = 3, .y = 1, .z = -2 },
+        .u = v.vec3{ .x = 2, .y = 0, .z = 0 },
+        .v = v.vec3{ .x = 0, .y = 2, .z = 0 },
+        .mat = diff_light,
+    };
+    try world.hittableList.pushQuad(quad);
+
+    const sphereLight = h.Sphere{
+        .center = r.ray{ .origin = v.point3{ .x = 0, .y = 7, .z = 0 } },
+        .radius = 2,
+        .mat = diff_light,
+    };
+    try world.hittableList.pushSphere(sphereLight);
+
+    var camera = cam.Camera{};
+
+    camera.aspect_ratio = 16.0 / 9.0;
+    camera.image_width = 400;
+    camera.samples_per_pixel = 100;
+    camera.max_recursion_depth = 50;
+    camera.background = c.color{ .x = 0, .y = 0, .z = 0 };
+
+    camera.vertical_fov = 20;
+    camera.look_from = v.point3{ .x = 26, .y = 3, .z = 6 };
+    camera.look_at = v.point3{ .x = 0, .y = 2, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
 
     try camera.render(&world);
 }
 
 pub fn main() !void {
-    switch (5) {
+    switch (6) {
         1 => try bouncingSpheres(),
         2 => try checkeredSpheres(),
         3 => try earth(),
         4 => try perlinSpheres(),
         5 => try quads(),
+        6 => try simpleLight(),
         else => {},
     }
 }
