@@ -5,6 +5,7 @@ const aabb = @import("aabb.zig");
 const r = @import("ray.zig");
 const h = @import("hittable.zig");
 const i = @import("interval.zig");
+const q = @import("quad.zig");
 
 pub const Quad = struct {
     q: vec.point3,
@@ -74,3 +75,109 @@ pub const Quad = struct {
         return true;
     }
 };
+
+pub fn box(a: *const vec.point3, b: *const vec.point3, mat: m.Material, allocator: std.mem.Allocator) !h.HittableList {
+
+    // Caller must call deinit() on the list returned by this function
+
+    var sides = h.HittableList{};
+    sides.init(allocator);
+
+    const min = vec.point3{
+        .x = @min(a.x, b.x),
+        .y = @min(a.y, b.y),
+        .z = @min(a.z, b.z),
+    };
+
+    const max = vec.point3{
+        .x = @max(a.x, b.x),
+        .y = @max(a.y, b.y),
+        .z = @max(a.z, b.z),
+    };
+
+    const dx = vec.vec3{
+        .x = max.x - min.x,
+        .y = 0,
+        .z = 0,
+    };
+
+    const dy = vec.vec3{
+        .x = 0,
+        .y = max.y - min.y,
+        .z = 0,
+    };
+
+    const dz = vec.vec3{
+        .x = 0,
+        .y = 0,
+        .z = max.z - min.z,
+    };
+
+    try sides.pushQuad(q.Quad{
+        .q = vec.point3{
+            .x = min.x,
+            .y = min.y,
+            .z = max.z,
+        },
+        .u = dx,
+        .v = dy,
+        .mat = mat,
+    });
+
+    try sides.pushQuad(q.Quad{
+        .q = vec.point3{
+            .x = max.x,
+            .y = min.y,
+            .z = max.z,
+        },
+        .u = vec.multiply(&dz, -1),
+        .v = dy,
+        .mat = mat,
+    });
+
+    try sides.pushQuad(q.Quad{
+        .q = vec.point3{
+            .x = max.x,
+            .y = min.y,
+            .z = min.z,
+        },
+        .u = vec.multiply(&dx, -1),
+        .v = dy,
+        .mat = mat,
+    });
+
+    try sides.pushQuad(q.Quad{
+        .q = vec.point3{
+            .x = min.x,
+            .y = min.y,
+            .z = min.z,
+        },
+        .u = dz,
+        .v = dy,
+        .mat = mat,
+    });
+
+    try sides.pushQuad(q.Quad{
+        .q = vec.point3{
+            .x = min.x,
+            .y = max.y,
+            .z = max.z,
+        },
+        .u = dx,
+        .v = vec.multiply(&dz, -1),
+        .mat = mat,
+    });
+
+    try sides.pushQuad(q.Quad{
+        .q = vec.point3{
+            .x = min.x,
+            .y = min.y,
+            .z = min.z,
+        },
+        .u = dx,
+        .v = dz,
+        .mat = mat,
+    });
+
+    return sides;
+}

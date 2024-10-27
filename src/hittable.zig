@@ -135,13 +135,9 @@ pub const HittableList = struct {
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
 
-    pub fn push(self: *HittableList, object: *Hittable) !void {
+    pub fn pushHittableList(self: *HittableList, list: *const HittableList) !void {
+        const object = Hittable{ .hittableList = list.* };
         try self.objects.append(object);
-        switch (object.*) {
-            .sphere => object.sphere.initBoundingBox(),
-            else => {},
-        }
-        //object.initBoundingBox();
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
 

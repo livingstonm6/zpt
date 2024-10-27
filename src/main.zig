@@ -431,6 +431,15 @@ fn cornellBox() !void {
         .mat = white,
     });
 
+    var box1 = try q.box(&v.point3{ .x = 130, .y = 0, .z = 65 }, &v.point3{ .x = 295, .y = 165, .z = 230 }, white, allocator);
+    defer box1.deinit();
+
+    var box2 = try q.box(&v.point3{ .x = 265, .y = 0, .z = 295 }, &v.point3{ .x = 430, .y = 330, .z = 460 }, white, allocator);
+    defer box2.deinit();
+
+    try world.hittableList.pushHittableList(&box1);
+    try world.hittableList.pushHittableList(&box2);
+
     var camera = cam.Camera{};
 
     camera.aspect_ratio = 1.0;
