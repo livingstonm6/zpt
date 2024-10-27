@@ -12,6 +12,8 @@ pub const Camera = struct {
     image_width: u16 = 400,
     samples_per_pixel: u8 = 10,
     max_recursion_depth: u8 = 10,
+    background: c.color = c.color{},
+
     pixel_samples_scale: f64 = undefined,
     image_height: u16 = undefined,
     center: vec.point3 = undefined,
@@ -83,26 +85,22 @@ pub const Camera = struct {
 
         const int = interval.Interval{ .min = 0.001, .max = std.math.inf(f64) };
 
-        if (world.hit(ray, int, p_rec)) {
-            //std.log.debug("Hit!", .{});
-            var scattered = r.ray{};
-            var attenuation = c.color{};
-            const p_scat: *r.ray = &scattered;
-            const p_att: *c.color = &attenuation;
-            if (try record.mat.scatter(ray, record, p_att, p_scat)) {
-                const ray_color = try self.rayColor(p_scat, world, depth - 1);
-                return vec.vecMultiply(&ray_color, p_att);
-            }
-            return c.color{};
+        if (!world.hit(ray, int, p_rec)) return self.background;
+
+        var scattered = r.ray{};
+        var attenuation = c.color{};
+        const p_scat: *r.ray = &scattered;
+        const p_att: *c.color = &attenuation;
+
+        const color_from_emission = try record.mat.emitted(record.u, record.v, &record.point);
+
+        if (!try record.mat.scatter(ray, record, p_att, p_scat)) {
+            return color_from_emission;
         }
 
-        // lerp
-        const unit_direction = vec.unit(&ray.direction);
-        const a = 0.5 * (unit_direction.y + 1.0);
+        const color_from_scatter = vec.vecMultiply(&attenuation, &try self.rayColor(&scattered, world, depth - 1));
 
-        const term1 = vec.multiply(&vec.vec3{ .x = 1.0, .y = 1.0, .z = 1.0 }, (1.0 - a));
-        const term2 = vec.multiply(&vec.vec3{ .x = 0.5, .y = 0.7, .z = 1.0 }, a);
-        return vec.add(&term1, &term2);
+        return vec.add(&color_from_emission, &color_from_scatter);
     }
 
     fn sampleSquare(self: Camera) !vec.vec3 {
