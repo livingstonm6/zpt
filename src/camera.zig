@@ -151,22 +151,22 @@ pub const Camera = struct {
 
         try stdout.print("P3\n{} {}\n255\n", .{ self.image_width, self.image_height });
 
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        const allocator = gpa.allocator();
+        var pool = std.Thread.Pool{ .allocator = allocator, .threads = &.{} };
+        const buffer = try allocator.alloc(c.color, self.image_width);
+        defer allocator.free(buffer);
+
         for (0..self.image_height) |j| {
             std.log.info("Scanline {} of {}.", .{ j, self.image_height });
+            try pool.init(.{ .allocator = allocator });
             for (0..self.image_width) |i| {
-                var pixel_color = c.color{ .x = 0, .y = 0, .z = 0 };
-                for (0..self.samples_per_pixel) |sample| {
-                    _ = sample;
-                    const i_float = @as(f64, @floatFromInt(i));
-                    const j_float = @as(f64, @floatFromInt(j));
-                    const ray = try self.getRay(i_float, j_float);
-                    const ray_color = try self.rayColor(&ray, world, self.max_recursion_depth);
-                    pixel_color = vec.add(&pixel_color, &ray_color);
-                }
+                try pool.spawn(job, .{ self, world, j, i, buffer });
+            }
+            pool.deinit();
 
-                pixel_color = vec.multiply(&pixel_color, self.pixel_samples_scale);
-
-                try c.writeColor(stdout, &pixel_color);
+            for (buffer) |color| {
+                try c.writeColor(stdout, &color);
             }
         }
         const after = std.time.milliTimestamp();
@@ -174,8 +174,22 @@ pub const Camera = struct {
         const time_s: f64 = @as(f64, @floatFromInt(time_ms)) / 1000.0;
         const time_m: f64 = time_s / 60.0;
 
-        std.log.info("Completed in {}ms ({}s, {} minutes)!", .{ time_ms, time_s, time_m });
+        std.log.info("Completed in {}ms ({} seconds, {} minutes)!", .{ time_ms, time_s, time_m });
 
         try bw.flush();
+    }
+
+    fn job(self: *Camera, world: *const h.Hittable, j: usize, i: usize, buffer: []c.color) void {
+        var pixel_color = c.color{};
+        for (0..self.samples_per_pixel) |sample| {
+            _ = sample;
+            const i_float: f64 = @floatFromInt(i);
+            const j_float: f64 = @floatFromInt(j);
+            const ray = self.getRay(i_float, j_float) catch r.ray{ .origin = vec.point3{}, .direction = vec.vec3{}, .time = 0 };
+            const ray_color = self.rayColor(&ray, world, self.max_recursion_depth) catch c.color{ .x = 0, .y = 0, .z = 0 };
+            pixel_color = vec.add(&pixel_color, &ray_color);
+        }
+
+        buffer[i] = vec.multiply(&pixel_color, self.pixel_samples_scale);
     }
 };
