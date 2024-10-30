@@ -126,6 +126,16 @@ pub fn getByIndex(v: *const vec3, n: usize) f64 {
     return v.z;
 }
 
+pub fn setByIndex(v: *vec3, value: f64, n: usize) void {
+    if (n == 0) {
+        v.x = value;
+    } else if (n == 1) {
+        v.y = value;
+    } else {
+        v.z = value;
+    }
+}
+
 test "add" {
     const v1 = vec3{ .x = 1, .y = 1, .z = 1 };
     const v2 = vec3{ .x = 1, .y = 2, .z = 3 };

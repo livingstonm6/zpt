@@ -30,6 +30,13 @@ pub const Interval = struct {
             .max = self.max + padding,
         };
     }
+
+    pub fn addOffset(self: Interval, offset: f64) Interval {
+        return Interval{
+            .min = self.min + offset,
+            .max = self.max + offset,
+        };
+    }
 };
 
 pub fn fromIntervals(a: *const Interval, b: *const Interval) Interval {

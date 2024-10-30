@@ -70,6 +70,13 @@ pub const AABB = struct {
         }
         return true;
     }
+
+    pub fn addOffset(self: *AABB, offset: *const v.vec3) AABB {
+        var result = AABB{};
+        result.initIntervals(self.x.addOffset(offset.x), self.y.addOffset(offset.y), self.z.addOffset(offset.z));
+
+        return result;
+    }
 };
 
 pub const empty = AABB{ .x = i.empty, .y = i.empty, .z = i.empty };
