@@ -6,6 +6,7 @@ const m = @import("material.zig");
 const a = @import("aabb.zig");
 const b = @import("bvh.zig");
 const q = @import("quad.zig");
+const vol = @import("volume.zig");
 
 pub const HitRecord = struct {
     point: vec.point3,
@@ -141,6 +142,12 @@ pub const HittableList = struct {
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
 
+    pub fn pushHittable(self: *HittableList, hittable: Hittable) !void {
+        try self.objects.append(hittable);
+        // assume object is initialized
+        self.box.initBoxes(&self.box, &hittable.boundingBox());
+    }
+
     pub fn getLen(self: HittableList) usize {
         return self.objects.items.len;
     }
@@ -174,6 +181,7 @@ pub const Hittable = union(enum) {
     hittableList: HittableList,
     bvh: b.BVHNode,
     quad: q.Quad,
+    constantMedium: vol.ConstantMedium,
 
     pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {

@@ -10,6 +10,7 @@ const bv = @import("bvh.zig");
 const t = @import("texture.zig");
 const image = @import("image.zig");
 const q = @import("quad.zig");
+const vol = @import("volume.zig");
 
 pub fn bouncingSpheres() !void {
     // Init hittable list
@@ -431,14 +432,24 @@ fn cornellBox() !void {
         .mat = white,
     });
 
-    var box1 = try q.box(&v.point3{ .x = 130, .y = 0, .z = 65 }, &v.point3{ .x = 295, .y = 165, .z = 230 }, white, allocator);
-    defer box1.deinit();
+    var box1 = h.Hittable{ .hittableList = try q.box(&v.point3{ .x = 130, .y = 0, .z = 65 }, &v.point3{ .x = 295, .y = 165, .z = 230 }, white, allocator) };
+    defer box1.hittableList.deinit();
 
-    var box2 = try q.box(&v.point3{ .x = 265, .y = 0, .z = 295 }, &v.point3{ .x = 430, .y = 330, .z = 460 }, white, allocator);
-    defer box2.deinit();
+    var box1Vol = vol.ConstantMedium{
+        .boundary = &box1,
+    };
+    box1Vol.initAlbedo(0.01, &c.color{ .x = 0, .y = 0, .z = 0 });
 
-    try world.hittableList.pushHittableList(&box1);
-    try world.hittableList.pushHittableList(&box2);
+    var box2 = h.Hittable{ .hittableList = try q.box(&v.point3{ .x = 265, .y = 0, .z = 295 }, &v.point3{ .x = 430, .y = 330, .z = 460 }, white, allocator) };
+    defer box2.hittableList.deinit();
+
+    var box2Vol = vol.ConstantMedium{
+        .boundary = &box2,
+    };
+    box2Vol.initAlbedo(0.01, &c.color{ .x = 1, .y = 1, .z = 1 });
+
+    try world.hittableList.pushHittable(h.Hittable{ .constantMedium = box1Vol });
+    try world.hittableList.pushHittable(h.Hittable{ .constantMedium = box2Vol });
 
     var camera = cam.Camera{};
 
