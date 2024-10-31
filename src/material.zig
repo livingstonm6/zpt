@@ -100,6 +100,28 @@ pub const Dielectric = struct {
     }
 };
 
+pub const Isotropic = struct {
+    texture: t.Texture = undefined,
+
+    pub fn initColor(self: *Isotropic, color: c.color) void {
+        self.texture = t.Texture{ .solidColor = t.SolidColor{ .albedo = color } };
+    }
+
+    pub fn initTexture(self: *Isotropic, texture: t.Texture) void {
+        self.texture = texture;
+    }
+
+    pub fn scatter(self: Isotropic, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
+        scattered.* = r.ray{
+            .origin = record.point,
+            .direction = try vec.randomUnit(),
+            .time = ray_in.time,
+        };
+        attenuation.* = try self.texture.value(record.u, record.v, &record.point);
+        return true;
+    }
+};
+
 pub const None = struct {
     pub fn scatter(self: None, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
         _ = .{ self, ray_in, record, attenuation, scattered };
@@ -113,6 +135,7 @@ pub const Material = union(enum) {
     metal: Metal,
     none: None,
     dielectric: Dielectric,
+    isotropic: Isotropic,
 
     pub fn scatter(self: Material, ray_in: *const r.ray, record: h.HitRecord, attenuation: *c.color, scattered: *r.ray) !bool {
         switch (self) {
