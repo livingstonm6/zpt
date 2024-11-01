@@ -7,6 +7,7 @@ const a = @import("aabb.zig");
 const b = @import("bvh.zig");
 const q = @import("quad.zig");
 const vol = @import("volume.zig");
+const inst = @import("instance.zig");
 
 pub const HitRecord = struct {
     point: vec.point3,
@@ -142,6 +143,13 @@ pub const HittableList = struct {
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
 
+    pub fn pushTranslate(self: *HittableList, translate: inst.Translate) !void {
+        const object = Hittable{ .translate = translate };
+        object.translate.initBoundingBox();
+        try self.objects.append(object);
+        self.box.initBoxes(&self.box, &object.boundingBox());
+    }
+
     pub fn pushHittable(self: *HittableList, hittable: Hittable) !void {
         try self.objects.append(hittable);
         // assume object is initialized
@@ -182,6 +190,7 @@ pub const Hittable = union(enum) {
     bvh: b.BVHNode,
     quad: q.Quad,
     constantMedium: vol.ConstantMedium,
+    translate: inst.Translate,
 
     pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {
