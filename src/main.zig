@@ -11,6 +11,7 @@ const t = @import("texture.zig");
 const image = @import("image.zig");
 const q = @import("quad.zig");
 const vol = @import("volume.zig");
+const inst = @import("instance.zig");
 
 pub fn bouncingSpheres() !void {
     // Init hittable list
@@ -432,29 +433,31 @@ fn cornellBox() !void {
         .mat = white,
     });
 
-    var box1 = h.Hittable{ .hittableList = try q.box(&v.point3{ .x = 130, .y = 0, .z = 65 }, &v.point3{ .x = 295, .y = 165, .z = 230 }, white, allocator) };
+    var box1 = h.Hittable{ .hittableList = try q.box(&v.point3{ .x = 0, .y = 0, .z = 0 }, &v.point3{ .x = 165, .y = 330, .z = 165 }, white, allocator) };
     defer box1.hittableList.deinit();
 
-    var box1Vol = vol.ConstantMedium{
-        .boundary = &box1,
-    };
-    box1Vol.initAlbedo(0.01, &c.color{ .x = 0, .y = 0, .z = 0 });
+    var rotated_box1 = inst.RotateY{ .object = &box1 };
+    rotated_box1.init(15);
 
-    var box2 = h.Hittable{ .hittableList = try q.box(&v.point3{ .x = 265, .y = 0, .z = 295 }, &v.point3{ .x = 430, .y = 330, .z = 460 }, white, allocator) };
+    var translated_box1 = inst.Translate{ .object = &h.Hittable{ .rotateY = rotated_box1 }, .offset = v.vec3{ .x = 265, .y = 0, .z = 295 } };
+    translated_box1.initBoundingBox();
+
+    var box2 = h.Hittable{ .hittableList = try q.box(&v.point3{ .x = 0, .y = 0, .z = 0 }, &v.point3{ .x = 165, .y = 165, .z = 165 }, white, allocator) };
     defer box2.hittableList.deinit();
 
-    var box2Vol = vol.ConstantMedium{
-        .boundary = &box2,
-    };
-    box2Vol.initAlbedo(0.01, &c.color{ .x = 1, .y = 1, .z = 1 });
+    var rotated_box2 = inst.RotateY{ .object = &box2 };
+    rotated_box2.init(-18);
 
-    try world.hittableList.pushHittable(h.Hittable{ .constantMedium = box1Vol });
-    try world.hittableList.pushHittable(h.Hittable{ .constantMedium = box2Vol });
+    var translated_box2 = inst.Translate{ .object = &h.Hittable{ .rotateY = rotated_box2 }, .offset = v.vec3{ .x = 130, .y = 0, .z = 65 } };
+    translated_box2.initBoundingBox();
+
+    try world.hittableList.pushTranslate(translated_box1);
+    try world.hittableList.pushTranslate(translated_box2);
 
     var camera = cam.Camera{};
 
     camera.aspect_ratio = 1.0;
-    camera.image_width = 600;
+    camera.image_width = 400;
     camera.samples_per_pixel = 200;
     camera.max_recursion_depth = 50;
     camera.background = c.color{ .x = 0, .y = 0, .z = 0 };

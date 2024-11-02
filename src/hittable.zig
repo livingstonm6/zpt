@@ -145,7 +145,7 @@ pub const HittableList = struct {
 
     pub fn pushTranslate(self: *HittableList, translate: inst.Translate) !void {
         const object = Hittable{ .translate = translate };
-        object.translate.initBoundingBox();
+        //object.translate.initBoundingBox();
         try self.objects.append(object);
         self.box.initBoxes(&self.box, &object.boundingBox());
     }
@@ -191,6 +191,7 @@ pub const Hittable = union(enum) {
     quad: q.Quad,
     constantMedium: vol.ConstantMedium,
     translate: inst.Translate,
+    rotateY: inst.RotateY,
 
     pub fn hit(self: Hittable, ray: *const r.ray, ray_t: i.Interval, record: *HitRecord) bool {
         switch (self) {
