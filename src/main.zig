@@ -479,8 +479,169 @@ fn cornellBox() !void {
     try camera.render(&bvh);
 }
 
+pub fn finalScene(image_width: usize, samples_per_pixel: usize, max_depth: usize) !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
+    var boxes1 = h.Hittable{ .hittableList = h.HittableList{} };
+    boxes1.hittableList.init(allocator);
+    defer boxes1.hittableList.deinit();
+
+    var ground = m.Material{ .lambertian = m.Lambertian{} };
+    ground.lambertian.initAlbedo(c.color{ .x = 0.48, .y = 0.83, .z = 0.53 });
+
+    const boxes_per_side = 20;
+
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+
+    for (0..boxes_per_side) |i| {
+        for (0..boxes_per_side) |j| {
+            const f_i: f64 = @floatFromInt(i);
+            const f_j: f64 = @floatFromInt(j);
+            const w: f64 = 100.0;
+
+            const point1 = v.point3{
+                .x = -1000.0 + f_i * w,
+                .y = 0.0,
+                .z = -1000.0 + f_j * w,
+            };
+
+            const point2 = v.point3{
+                .x = point1.x + w,
+                .y = try util.randomF64Range(1, 101),
+                .z = point1.z + w,
+            };
+
+            const box = try q.box(&point1, &point2, ground, arena.allocator());
+            // defer box.deinit();
+
+            try boxes1.hittableList.pushHittableList(&box);
+        }
+    }
+
+    var world = h.Hittable{ .hittableList = h.HittableList{} };
+    world.hittableList.init(allocator);
+    defer world.hittableList.deinit();
+
+    var bvh1 = h.Hittable{ .bvh = bv.BVHNode{} };
+    try bvh1.bvh.initTree(&boxes1.hittableList, arena.allocator());
+
+    try world.hittableList.pushHittable(bvh1);
+
+    var light = m.Material{ .diffuseLight = m.DiffuseLight{} };
+    light.diffuseLight.initColor(c.color{ .x = 7, .y = 7, .z = 7 });
+
+    const light_quad = q.Quad{
+        .q = v.point3{ .x = 123, .y = 554, .z = 147 },
+        .u = v.point3{ .x = 300, .y = 0, .z = 0 },
+        .v = v.point3{ .x = 0, .y = 0, .z = 265 },
+        .mat = light,
+    };
+    try world.hittableList.pushQuad(light_quad);
+
+    const center1 = v.point3{ .x = 400, .y = 400, .z = 200 };
+    const center2 = v.point3{ .x = 430, .y = 400, .z = 200 };
+    var sphere_mat = m.Material{ .lambertian = m.Lambertian{} };
+    sphere_mat.lambertian.initAlbedo(c.color{ .x = 0.7, .y = 0.3, .z = 0.1 });
+    try world.hittableList.pushSphere(h.Sphere{
+        .center = r.ray{
+            .origin = center1,
+            .direction = v.subtract(&center2, &center1),
+        },
+        .radius = 50,
+        .mat = sphere_mat,
+    });
+
+    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{
+        .origin = v.vec3{ .x = 260, .y = 150, .z = 45 },
+    }, .radius = 50, .mat = m.Material{ .dielectric = m.Dielectric{ .refraction_index = 1.5 } } });
+
+    try world.hittableList.pushSphere(h.Sphere{
+        .center = r.ray{
+            .origin = v.vec3{ .x = 0, .y = 150, .z = 145 },
+        },
+        .radius = 50,
+        .mat = m.Material{ .metal = m.Metal{ .albedo = c.color{ .x = 0.8, .y = 0.8, .z = 0.9 }, .fuzz = 1.0 } },
+    });
+
+    var boundary = h.Sphere{
+        .center = r.ray{
+            .origin = v.point3{ .x = 360, .y = 150, .z = 145 },
+        },
+        .radius = 70,
+        .mat = m.Material{ .dielectric = m.Dielectric{ .refraction_index = 1.5 } },
+    };
+    boundary.initBoundingBox();
+    try world.hittableList.pushSphere(boundary);
+
+    var cm1 = vol.ConstantMedium{ .boundary = &h.Hittable{ .sphere = boundary } };
+    cm1.initAlbedo(0.2, &c.color{ .x = 0.2, .y = 0.4, .z = 0.9 });
+    try world.hittableList.pushHittable(h.Hittable{ .constantMedium = cm1 });
+
+    var boundary2 = h.Sphere{
+        .center = r.ray{},
+        .radius = 5000,
+        .mat = m.Material{ .dielectric = m.Dielectric{ .refraction_index = 1.5 } },
+    };
+    boundary2.initBoundingBox();
+    var cm2 = vol.ConstantMedium{ .boundary = &h.Hittable{ .sphere = boundary2 } };
+    cm2.initAlbedo(0.0001, &c.color{ .x = 1, .y = 1, .z = 1 });
+    try world.hittableList.pushHittable(h.Hittable{ .constantMedium = cm2 });
+
+    var emat = m.Material{ .lambertian = m.Lambertian{ .texture = t.Texture{ .imageTexture = t.ImageTexture{ .fileName = "earthmap.jpg" } } } };
+    try emat.lambertian.texture.imageTexture.init(allocator);
+    defer emat.lambertian.texture.imageTexture.deinit();
+    try world.hittableList.pushSphere(h.Sphere{ .center = r.ray{
+        .origin = v.point3{ .x = 400, .y = 200, .z = 400 },
+    }, .radius = 100, .mat = emat });
+
+    var boxes2 = h.Hittable{ .hittableList = h.HittableList{} };
+    boxes2.hittableList.init(allocator);
+    defer boxes2.hittableList.deinit();
+
+    var white = m.Material{ .lambertian = m.Lambertian{} };
+    white.lambertian.initAlbedo(c.color{ .x = 0.73, .y = 0.73, .z = 0.73 });
+    const ns = 1000;
+    for (0..ns) |j| {
+        _ = j;
+        try boxes2.hittableList.pushSphere(h.Sphere{
+            .center = r.ray{ .origin = try v.randomRange(0, 165) },
+            .radius = 10,
+            .mat = white,
+        });
+    }
+
+    var bvh2 = h.Hittable{ .bvh = bv.BVHNode{} };
+    try bvh2.bvh.initTree(&boxes2.hittableList, arena.allocator());
+
+    var rotate = inst.RotateY{
+        .object = &bvh2,
+    };
+    rotate.init(15);
+
+    const translate = inst.Translate{ .object = &h.Hittable{ .rotateY = rotate }, .offset = v.vec3{ .x = -100, .y = 270, .z = 395 } };
+    try world.hittableList.pushTranslate(translate);
+
+    var camera = cam.Camera{};
+    camera.aspect_ratio = 1.0;
+    camera.image_width = image_width;
+    camera.samples_per_pixel = samples_per_pixel;
+    camera.max_recursion_depth = max_depth;
+    camera.background = c.color{};
+
+    camera.vertical_fov = 40;
+    camera.look_from = v.point3{ .x = 478, .y = 278, .z = -600 };
+    camera.look_at = v.point3{ .x = 278, .y = 278, .z = 0 };
+    camera.v_up = v.vec3{ .x = 0, .y = 1, .z = 0 };
+
+    camera.dof_angle = 0;
+
+    try camera.render(&world);
+}
+
 pub fn main() !void {
-    switch (7) {
+    switch (8) {
         1 => try bouncingSpheres(),
         2 => try checkeredSpheres(),
         3 => try earth(),
@@ -488,6 +649,9 @@ pub fn main() !void {
         5 => try quads(),
         6 => try simpleLight(),
         7 => try cornellBox(),
+        8 => try finalScene(800, 10000, 40),
+        9 => try finalScene(400, 250, 4),
+
         else => {},
     }
 }

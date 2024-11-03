@@ -9,13 +9,13 @@ const m = @import("material.zig");
 
 pub const Camera = struct {
     aspect_ratio: f64 = 16.0 / 9.0,
-    image_width: u16 = 400,
-    samples_per_pixel: u8 = 10,
-    max_recursion_depth: u8 = 10,
+    image_width: usize = 400,
+    samples_per_pixel: usize = 10,
+    max_recursion_depth: usize = 10,
     background: c.color = c.color{},
 
     pixel_samples_scale: f64 = undefined,
-    image_height: u16 = undefined,
+    image_height: usize = undefined,
     center: vec.point3 = undefined,
     pixel00_loc: vec.point3 = undefined,
     pixel_delta_u: vec.vec3 = undefined,
@@ -75,7 +75,7 @@ pub const Camera = struct {
         self.dof_disk_v = vec.multiply(&self.v, dof_radius);
     }
 
-    fn rayColor(self: *Camera, ray: *const r.ray, world: *const h.Hittable, depth: u8) !c.color {
+    fn rayColor(self: *Camera, ray: *const r.ray, world: *const h.Hittable, depth: usize) !c.color {
         if (depth <= 0) {
             return c.color{ .x = 0, .y = 0, .z = 0 };
         }

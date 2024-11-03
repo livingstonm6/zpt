@@ -10,7 +10,7 @@ const util = @import("util.zig");
 const a = @import("aabb.zig");
 
 pub const ConstantMedium = struct {
-    boundary: *h.Hittable,
+    boundary: *const h.Hittable,
     neg_inv_density: f64 = undefined,
     phase_function: m.Material = undefined,
 
