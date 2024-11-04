@@ -596,6 +596,15 @@ pub fn finalScene(image_width: usize, samples_per_pixel: usize, max_depth: usize
         .origin = v.point3{ .x = 400, .y = 200, .z = 400 },
     }, .radius = 100, .mat = emat });
 
+    var pertext = m.Material{ .lambertian = m.Lambertian{ .texture = t.Texture{ .noiseTexture = t.NoiseTexture{ .scale = 0.2 } } } };
+    try pertext.lambertian.texture.noiseTexture.init(allocator);
+    defer pertext.lambertian.texture.noiseTexture.deinit();
+    try world.hittableList.pushSphere(h.Sphere{
+        .center = r.ray{ .origin = v.point3{ .x = 220, .y = 280, .z = 300 } },
+        .radius = 80,
+        .mat = pertext,
+    });
+
     var boxes2 = h.Hittable{ .hittableList = h.HittableList{} };
     boxes2.hittableList.init(allocator);
     defer boxes2.hittableList.deinit();
