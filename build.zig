@@ -15,30 +15,19 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
-        .name = "RayTracingInOneWeekend",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running `zig build`).
-    b.installArtifact(lib);
-
-    const exe = b.addExecutable(.{
-        .name = "RayTracingInOneWeekend",
+    const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
+    const exe = b.addExecutable(.{
+        .name = "RayTracingInOneWeekend",
+        .root_module = exe_mod,
+    });
+
     const zstbi = b.dependency("zstbi", .{});
     exe.root_module.addImport("zstbi", zstbi.module("root"));
-    exe.linkLibrary(zstbi.artifact("zstbi"));
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

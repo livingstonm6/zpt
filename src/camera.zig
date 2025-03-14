@@ -153,7 +153,7 @@ pub const Camera = struct {
 
         var gpa = std.heap.GeneralPurposeAllocator(.{}){};
         const allocator = gpa.allocator();
-        var pool = std.Thread.Pool{ .allocator = allocator, .threads = &.{} };
+        var pool = std.Thread.Pool{ .allocator = allocator, .threads = &.{}, .ids = .{} };
         const buffer = try allocator.alloc(c.color, self.image_width);
         defer allocator.free(buffer);
 
